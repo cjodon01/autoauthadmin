@@ -9,6 +9,7 @@ import { Textarea } from '../components/ui/Textarea'
 import { Edit, Trash2, RefreshCw, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { supabase } from '../lib/supabase'
 
 interface SocialConnection {
   id: string

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-//import { supabase, type SurveyQuestion, type SurveyResponse } from '../lib/supabase'
+import { supabase, type SurveyQuestion, type SurveyResponse } from '../lib/supabase'
 import { Table } from '../components/ui/Table'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'

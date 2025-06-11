@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate, Routes, Route, Navigate } from 'react-router-dom'
-import { Login } from './Login'
+import { Layout } from '../components/Layout'
+
 import { Dashboard } from './Dashboard'
 import { Users } from './Users'
 import { UserManagement } from './UserManagement'
@@ -15,7 +16,6 @@ import { Surveys } from './Surveys'
 import { AccessDenied } from './AccessDenied'
 import { SurveyManagement } from './SurveyManagement'
 import { AnalyticsManagement } from './AnalyticsManagement'
-// ... import the rest of your pages
 
 export function MasterPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -48,12 +48,23 @@ export function MasterPage() {
   if (!isAdmin) return <AccessDenied />
 
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/brands" element={<Brands />} />
-      <Route path="/campaigns" element={<Campaigns />} />
-      {/* Add other protected routes here */}
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/user-management" element={<UserManagement />} />
+        <Route path="/social-connections" element={<SocialConnections />} />
+        <Route path="/social-pages" element={<SocialPagesManagement />} />
+        <Route path="/campaigns" element={<Campaigns />} />
+        <Route path="/brands" element={<Brands />} />
+        <Route path="/ai-config" element={<AIConfig />} />
+        <Route path="/content-log" element={<ContentLog />} />
+        <Route path="/surveys" element={<Surveys />} />
+        <Route path="/survey-management" element={<SurveyManagement />} />
+        <Route path="/analytics" element={<AnalyticsManagement />} />
+        <Route path="/access-denied" element={<AccessDenied />} />
+      </Routes>
+    </Layout>
   )
 }

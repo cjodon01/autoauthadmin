@@ -1,10 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
-import { Shield, ArrowLeft } from 'lucide-react'
+import { Shield, ExternalLink } from 'lucide-react'
 
 export function AccessDenied() {
-  const navigate = useNavigate()
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 text-center">
@@ -22,15 +20,21 @@ export function AccessDenied() {
             Only authorized administrators can access this system.
           </p>
         </div>
-        
+
         <div className="mt-8">
-          <Button
-            onClick={() => navigate('/login')}
-            className="w-full"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Login
-          </Button>
+          <a href="https://autoauthor.cc" target="_blank" rel="noopener noreferrer">
+            <Button className="w-full">
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Go to autoauthor.cc
+            </Button>
+          </a>
+
+          <p className="mt-4 text-sm text-gray-500">
+            Need help? Contact us at <br />
+            <a href="mailto:support@autoauthor.cc" className="text-blue-600 underline">
+              support@autoauthor.cc
+            </a>
+          </p>
         </div>
       </div>
     </div>

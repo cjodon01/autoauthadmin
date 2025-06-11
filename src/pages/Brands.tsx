@@ -136,10 +136,10 @@ export function Brands() {
                 <td className="px-4 py-2 truncate max-w-xs">{brand.description}</td>
                 <td className="px-4 py-2">{brand.industry}</td>
                 <td className="px-4 py-2 space-x-2">
-                  <Button variant="outline" onClick={() => handleEdit(brand)}>
+                  <Button variant="secondary" onClick={() => handleEdit(brand)}>
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button variant="destructive" onClick={() => handleDelete(brand)}>
+                  <Button variant="danger" onClick={() => handleDelete(brand)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </td>

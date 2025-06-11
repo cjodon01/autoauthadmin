@@ -36,7 +36,7 @@ export function MasterPage() {
         .from('admin_users')
         .select('user_id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
       setIsAdmin(!!data)
     }

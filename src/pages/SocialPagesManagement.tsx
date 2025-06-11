@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { supabase, type SocialPage } from '../lib/supabase'
+//import { supabase, type SocialPage } from '../lib/supabase'
 import { Table } from '../components/ui/Table'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'

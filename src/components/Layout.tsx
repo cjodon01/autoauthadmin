@@ -6,25 +6,33 @@ import {
   X,
   Home,
   Users,
+  UserCog,
   Share2,
+  Globe,
   Megaphone,
   Palette,
   Bot,
   FileText,
   LogOut,
   Settings,
+  BarChart3,
+  TrendingUp,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Users', href: '/users', icon: Users },
+  { name: 'User Profiles', href: '/users', icon: Users },
+  { name: 'User Management', href: '/user-management', icon: UserCog },
   { name: 'Social Connections', href: '/social-connections', icon: Share2 },
+  { name: 'Social Pages', href: '/social-pages', icon: Globe },
   { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
   { name: 'Brands', href: '/brands', icon: Palette },
   { name: 'AI Configuration', href: '/ai-config', icon: Bot },
   { name: 'Content Log', href: '/content-log', icon: FileText },
-  { name: 'Survey Data', href: '/surveys', icon: Settings },
+  { name: 'Survey Data', href: '/surveys', icon: BarChart3 },
+  { name: 'Survey Management', href: '/survey-management', icon: Settings },
+  { name: 'Analytics', href: '/analytics', icon: TrendingUp },
 ]
 
 interface LayoutProps {
@@ -58,7 +66,7 @@ export function Layout({ children }: LayoutProps) {
               <X className="h-6 w-6" />
             </button>
           </div>
-          <nav className="flex-1 space-y-1 px-2 py-4">
+          <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.href
@@ -73,7 +81,7 @@ export function Layout({ children }: LayoutProps) {
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  <Icon className="mr-3 h-5 w-5" />
+                  <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
                   {item.name}
                 </Link>
               )
@@ -88,7 +96,7 @@ export function Layout({ children }: LayoutProps) {
           <div className="flex h-16 items-center px-4">
             <h1 className="text-xl font-bold text-gray-900">AutoAuthor Admin</h1>
           </div>
-          <nav className="flex-1 space-y-1 px-2 py-4">
+          <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.href
@@ -102,7 +110,7 @@ export function Layout({ children }: LayoutProps) {
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
-                  <Icon className="mr-3 h-5 w-5" />
+                  <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
                   {item.name}
                 </Link>
               )

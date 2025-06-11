@@ -6,12 +6,16 @@ import { Layout } from './components/Layout'
 import { Login } from './pages/Login'
 import { Dashboard } from './pages/Dashboard'
 import { Users } from './pages/Users'
+import { UserManagement } from './pages/UserManagement'
 import { SocialConnections } from './pages/SocialConnections'
+import { SocialPagesManagement } from './pages/SocialPagesManagement'
 import { Campaigns } from './pages/Campaigns'
 import { Brands } from './pages/Brands'
 import { AIConfig } from './pages/AIConfig'
 import { ContentLog } from './pages/ContentLog'
 import { Surveys } from './pages/Surveys'
+import { SurveyManagement } from './pages/SurveyManagement'
+import { AnalyticsManagement } from './pages/AnalyticsManagement'
 
 function App() {
   return (
@@ -39,10 +43,24 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/user-management" element={
+            <ProtectedRoute>
+              <Layout>
+                <UserManagement />
+              </Layout>
+            </ProtectedRoute>
+          } />
           <Route path="/social-connections" element={
             <ProtectedRoute>
               <Layout>
                 <SocialConnections />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/social-pages" element={
+            <ProtectedRoute>
+              <Layout>
+                <SocialPagesManagement />
               </Layout>
             </ProtectedRoute>
           } />
@@ -78,6 +96,20 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Surveys />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/survey-management" element={
+            <ProtectedRoute>
+              <Layout>
+                <SurveyManagement />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              <Layout>
+                <AnalyticsManagement />
               </Layout>
             </ProtectedRoute>
           } />

@@ -113,6 +113,13 @@ function App() {
               </Layout>
             </ProtectedRoute>
           } />
+          <Route path="/denied" element={
+            <ProtectedRoute>
+              <Layout>
+                <AccessDenied/>
+              </Layout>
+            </ProtectedRoute>
+          } />
         </Routes>
         <Toaster position="top-right" />
       </div>

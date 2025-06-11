@@ -1,8 +1,21 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../components/ui/Button'
+import { supabase } from '../lib/supabase'
 import { Shield, ExternalLink } from 'lucide-react'
 
 export function AccessDenied() {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const timeout = setTimeout(async () => {
+      await supabase.auth.signOut()
+      navigate('/login')
+    }, 10000) // 10 seconds
+
+    return () => clearTimeout(timeout)
+  }, [navigate])
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 text-center">
@@ -36,6 +49,10 @@ export function AccessDenied() {
             </a>
           </p>
         </div>
+
+        <p className="text-xs text-gray-400 mt-2">
+          Redirecting to login in 10 seconds...
+        </p>
       </div>
     </div>
   )

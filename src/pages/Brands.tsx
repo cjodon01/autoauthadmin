@@ -41,7 +41,7 @@ export function Brands() {
       const [brandsResult, profilesResult] = await Promise.all([
         supabase.from('brands').select(`
           *,
-          users!brands_user_id_fkey(email)
+          profiles!brands_user_id_fkey(brand_name, email)
         `).order('created_at', { ascending: false }),
         supabase.from('profiles').select('user_id, brand_name, email')
       ])
@@ -172,8 +172,8 @@ export function Brands() {
       label: 'Owner',
       render: (brand: any) => (
         <div>
-          <div className="font-medium">{brand.users?.email || 'Unknown'}</div>
-          <div className="text-sm text-gray-500">{brand.user_id}</div>
+          <div className="font-medium">{brand.profiles?.email || 'Unknown'}</div>
+          <div className="text-sm text-gray-500">{brand.profiles?.brand_name || brand.user_id}</div>
         </div>
       ),
     },

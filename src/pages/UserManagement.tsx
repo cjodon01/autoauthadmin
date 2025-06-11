@@ -55,11 +55,32 @@ export function UserManagement() {
     loadData()
   }, [])
 
+  const callAdminFunction = async (action: string, method: string = 'GET', body?: any) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) throw new Error('Not authenticated')
+
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-users?action=${action}`
+    const response = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Request failed')
+    }
+
+    return response.json()
+  }
+
   const loadData = async () => {
     try {
-      // Load auth users using admin API
-      const { data: authData, error: authError } = await supabase.auth.admin.listUsers()
-      if (authError) throw authError
+      // Load auth users using admin function
+      const authResult = await callAdminFunction('list')
 
       // Load profiles
       const { data: profileData, error: profileError } = await supabase
@@ -69,10 +90,10 @@ export function UserManagement() {
 
       if (profileError) throw profileError
 
-      setAuthUsers(authData.users || [])
+      setAuthUsers(authResult.users || [])
       setProfiles(profileData || [])
     } catch (error: any) {
-      toast.error('Failed to load user data')
+      toast.error('Failed to load user data: ' + error.message)
       console.error(error)
     } finally {
       setLoading(false)
@@ -107,14 +128,13 @@ export function UserManagement() {
     if (!confirm('Are you sure you want to delete this profile? This will also delete the associated auth user.')) return
 
     try {
-      // Delete auth user (this will cascade to profile)
-      const { error: authError } = await supabase.auth.admin.deleteUser(profile.user_id)
-      if (authError) throw authError
+      // Delete auth user using admin function
+      await callAdminFunction('delete', 'DELETE', { userId: profile.user_id })
 
       toast.success('User deleted successfully')
       loadData()
     } catch (error: any) {
-      toast.error('Failed to delete user')
+      toast.error('Failed to delete user: ' + error.message)
       console.error(error)
     }
   }
@@ -132,20 +152,17 @@ export function UserManagement() {
         if (error) throw error
         toast.success('Profile updated successfully')
       } else {
-        // Create new auth user first
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        // Create new auth user using admin function
+        const authResult = await callAdminFunction('create', 'POST', {
           email: formData.email,
-          password: 'TempPassword123!', // Temporary password
-          email_confirm: true,
+          password: 'TempPassword123!',
         })
-
-        if (authError) throw authError
 
         // Create profile
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([{
-            user_id: authData.user.id,
+            user_id: authResult.user.id,
             ...formData,
           }])
 
@@ -157,29 +174,26 @@ export function UserManagement() {
       setEditingProfile(null)
       loadData()
     } catch (error: any) {
-      toast.error('Failed to save user')
+      toast.error('Failed to save user: ' + error.message)
       console.error(error)
     }
   }
 
   const handleBanUser = async (userId: string, ban: boolean) => {
     try {
-      if (ban) {
-        const { error } = await supabase.auth.admin.updateUserById(userId, {
-          ban_duration: '876000h' // 100 years
-        })
-        if (error) throw error
-        toast.success('User banned successfully')
-      } else {
-        const { error } = await supabase.auth.admin.updateUserById(userId, {
-          ban_duration: 'none'
-        })
-        if (error) throw error
-        toast.success('User unbanned successfully')
-      }
+      const updates = ban 
+        ? { ban_duration: '876000h' } // 100 years
+        : { ban_duration: 'none' }
+
+      await callAdminFunction('update', 'POST', {
+        userId,
+        updates
+      })
+
+      toast.success(`User ${ban ? 'banned' : 'unbanned'} successfully`)
       loadData()
     } catch (error: any) {
-      toast.error(`Failed to ${ban ? 'ban' : 'unban'} user`)
+      toast.error(`Failed to ${ban ? 'ban' : 'unban'} user: ` + error.message)
       console.error(error)
     }
   }
@@ -188,17 +202,17 @@ export function UserManagement() {
     if (!selectedUserId || !newPassword) return
 
     try {
-      const { error } = await supabase.auth.admin.updateUserById(selectedUserId, {
-        password: newPassword
+      await callAdminFunction('update', 'POST', {
+        userId: selectedUserId,
+        updates: { password: newPassword }
       })
 
-      if (error) throw error
       toast.success('Password reset successfully')
       setPasswordModalOpen(false)
       setNewPassword('')
       setSelectedUserId('')
     } catch (error: any) {
-      toast.error('Failed to reset password')
+      toast.error('Failed to reset password: ' + error.message)
       console.error(error)
     }
   }

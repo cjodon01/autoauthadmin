@@ -14,6 +14,7 @@ import { Brands } from './pages/Brands'
 import { AIConfig } from './pages/AIConfig'
 import { ContentLog } from './pages/ContentLog'
 import { Surveys } from './pages/Surveys'
+import { AccessDenied } from './pages/AcceddDenied'
 import { SurveyManagement } from './pages/SurveyManagement'
 import { AnalyticsManagement } from './pages/AnalyticsManagement'
 

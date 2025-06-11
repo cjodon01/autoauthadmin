@@ -1,10 +1,20 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useNavigate, Routes, Route, Navigate } from 'react-router-dom'
+import { Login } from './Login'
 import { Dashboard } from './Dashboard'
-import { AccessDenied } from './AccessDenied'
-import { Brands } from './Brands'
+import { Users } from './Users'
+import { UserManagement } from './UserManagement'
+import { SocialConnections } from './SocialConnections'
+import { SocialPagesManagement } from './SocialPagesManagement'
 import { Campaigns } from './Campaigns'
+import { Brands } from './Brands'
+import { AIConfig } from './AIConfig'
+import { ContentLog } from './ContentLog'
+import { Surveys } from './Surveys'
+import { AccessDenied } from './AccessDenied'
+import { SurveyManagement } from './SurveyManagement'
+import { AnalyticsManagement } from './AnalyticsManagement'
 // ... import the rest of your pages
 
 export function MasterPage() {

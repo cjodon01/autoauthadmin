@@ -10,23 +10,6 @@ import { Edit, Trash2, RefreshCw, Plus, TrendingUp } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
 
-interface AnalyticsData {
-  id: string
-  campaign_id?: string
-  platform: string
-  post_id: string
-  impressions?: number
-  clicks?: number
-  likes?: number
-  shares?: number
-  comments?: number
-  engagement_rate?: number
-  metrics_json?: any
-  fetched_at?: string
-  created_at: string
-  updated_at: string
-}
-
 export function AnalyticsManagement() {
   const [analytics, setAnalytics] = useState<any[]>([])
   const [campaigns, setCampaigns] = useState<any[]>([])

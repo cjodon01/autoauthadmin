@@ -44,7 +44,18 @@ export function Brands() {
 
   const handleEdit = (brand: Brand) => {
     setEditingBrand(brand)
-    setFormData({ ...brand })
+    setFormData({
+      name: brand.name,
+      description: brand.description || '',
+      mission_statement: brand.mission_statement || '',
+      usp_statement: brand.usp_statement || '',
+      brand_persona_description: brand.brand_persona_description || '',
+      target_audience: brand.target_audience || '',
+      brand_voice: brand.brand_voice || '',
+      industry: brand.industry || '',
+      primary_color: brand.primary_color || '',
+      secondary_color: brand.secondary_color || '',
+    })
     setModalOpen(true)
   }
 
@@ -145,14 +156,73 @@ export function Brands() {
         title={editingBrand ? 'Edit Brand' : 'Add Brand'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {Object.entries(formData).map(([key, value]) => (
-            <Input
-              key={key}
-              label={key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-              value={value}
-              onChange={(val) => handleChange(key, val)}
-            />
-          ))}
+          <Input
+            label="Name"
+            value={formData.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            required
+          />
+          
+          <Textarea
+            label="Description"
+            value={formData.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            rows={3}
+          />
+          
+          <Textarea
+            label="Mission Statement"
+            value={formData.mission_statement}
+            onChange={(e) => handleChange('mission_statement', e.target.value)}
+            rows={3}
+          />
+          
+          <Textarea
+            label="USP Statement"
+            value={formData.usp_statement}
+            onChange={(e) => handleChange('usp_statement', e.target.value)}
+            rows={3}
+          />
+          
+          <Textarea
+            label="Brand Persona Description"
+            value={formData.brand_persona_description}
+            onChange={(e) => handleChange('brand_persona_description', e.target.value)}
+            rows={3}
+          />
+          
+          <Input
+            label="Target Audience"
+            value={formData.target_audience}
+            onChange={(e) => handleChange('target_audience', e.target.value)}
+          />
+          
+          <Input
+            label="Brand Voice"
+            value={formData.brand_voice}
+            onChange={(e) => handleChange('brand_voice', e.target.value)}
+          />
+          
+          <Input
+            label="Industry"
+            value={formData.industry}
+            onChange={(e) => handleChange('industry', e.target.value)}
+          />
+          
+          <Input
+            label="Primary Color"
+            value={formData.primary_color}
+            onChange={(e) => handleChange('primary_color', e.target.value)}
+            type="color"
+          />
+          
+          <Input
+            label="Secondary Color"
+            value={formData.secondary_color}
+            onChange={(e) => handleChange('secondary_color', e.target.value)}
+            type="color"
+          />
+          
           <Button type="submit" className="w-full">
             {editingBrand ? 'Update Brand' : 'Create Brand'}
           </Button>

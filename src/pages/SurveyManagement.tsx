@@ -9,7 +9,7 @@ import { Textarea } from '../components/ui/Textarea'
 import { Edit, Trash2, RefreshCw, Plus, BarChart3, Users, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
-import { supabase } from '../lib/supabase'
+//import { supabase } from '../lib/supabase'
 
 export function SurveyManagement() {
   const [questions, setQuestions] = useState<SurveyQuestion[]>([])

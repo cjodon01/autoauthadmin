@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAdminGuard } from '../lib/useadminguard';
 import { Layout } from '../components/Layout';
-import Table from '../components/ui/Table';
+import { Table } from '../components/ui/Table';
 import { Button } from '../components/ui/Button';
 
 interface FacebookAPILog {

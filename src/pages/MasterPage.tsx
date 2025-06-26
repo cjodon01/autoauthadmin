@@ -19,6 +19,7 @@ import { AnalyticsManagement } from './AnalyticsManagement'
 import { FacebookAccounts } from './FacebookAccounts'
 import { FacebookAPILogs } from './FacebookAPILogs'
 import { ManualPostTrigger } from './ManualPostTrigger'
+import { APITester } from './APITester'
 
 export function MasterPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -69,6 +70,7 @@ export function MasterPage() {
         <Route path="/facebook-accounts" element={<FacebookAccounts />} />
         <Route path="/facebook-api-logs" element={<FacebookAPILogs />} />
         <Route path="/manual-post-trigger" element={<ManualPostTrigger />} />
+        <Route path="/api-tester" element={<APITester />} />
         <Route path="/access-denied" element={<AccessDenied />} />
       </Routes>
     </Layout>

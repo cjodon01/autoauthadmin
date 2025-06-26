@@ -22,6 +22,7 @@ import {
   Send,
   ChevronRight,
   ChevronDown,
+  TestTube,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -85,6 +86,12 @@ const navigation: NavigationItem[] = [
         name: 'Manual Post Trigger', 
         href: '/manual-post-trigger', 
         icon: Send,
+        badge: 'FB Review'
+      },
+      { 
+        name: 'API Tester', 
+        href: '/api-tester', 
+        icon: TestTube,
         badge: 'FB Review'
       },
     ]

@@ -16,6 +16,9 @@ import { Surveys } from './Surveys'
 import { AccessDenied } from './AccessDenied'
 import { SurveyManagement } from './SurveyManagement'
 import { AnalyticsManagement } from './AnalyticsManagement'
+import { FacebookAccounts } from './FacebookAccounts'
+import { FacebookAPILogs } from './FacebookAPILogs'
+import { ManualPostTrigger } from './ManualPostTrigger'
 
 export function MasterPage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
@@ -63,6 +66,9 @@ export function MasterPage() {
         <Route path="/surveys" element={<Surveys />} />
         <Route path="/survey-management" element={<SurveyManagement />} />
         <Route path="/analytics" element={<AnalyticsManagement />} />
+        <Route path="/facebook-accounts" element={<FacebookAccounts />} />
+        <Route path="/facebook-api-logs" element={<FacebookAPILogs />} />
+        <Route path="/manual-post-trigger" element={<ManualPostTrigger />} />
         <Route path="/access-denied" element={<AccessDenied />} />
       </Routes>
     </Layout>

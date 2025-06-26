@@ -17,6 +17,9 @@ import {
   Settings,
   BarChart3,
   TrendingUp,
+  Facebook,
+  Activity,
+  Send,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -33,6 +36,24 @@ const navigation = [
   { name: 'Survey Data', href: '/surveys', icon: BarChart3 },
   { name: 'Survey Management', href: '/survey-management', icon: Settings },
   { name: 'Analytics', href: '/analytics', icon: TrendingUp },
+  { 
+    name: 'Facebook Accounts', 
+    href: '/facebook-accounts', 
+    icon: Facebook,
+    badge: 'FB Review'
+  },
+  { 
+    name: 'Facebook API Logs', 
+    href: '/facebook-api-logs', 
+    icon: Activity,
+    badge: 'FB Review'
+  },
+  { 
+    name: 'Manual Post Trigger', 
+    href: '/manual-post-trigger', 
+    icon: Send,
+    badge: 'FB Review'
+  },
 ]
 
 interface LayoutProps {
@@ -82,7 +103,12 @@ export function Layout({ children }: LayoutProps) {
                   }`}
                 >
                   <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {item.badge && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -111,7 +137,12 @@ export function Layout({ children }: LayoutProps) {
                   }`}
                 >
                   <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {item.badge && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               )
             })}

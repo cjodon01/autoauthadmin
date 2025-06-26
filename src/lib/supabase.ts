@@ -171,3 +171,16 @@ export interface SurveyResponse {
   response_text?: string
   created_at: string
 }
+
+export interface FacebookAPILog {
+  id: string
+  user_id?: string
+  endpoint: string
+  method: string
+  response_code: number
+  action_type: string
+  request_body?: any
+  response_body?: any
+  error_message?: string
+  created_at: string
+}

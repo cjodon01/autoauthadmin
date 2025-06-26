@@ -24,41 +24,49 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadStats()
-  }, [])
+    let mounted = true
 
-  const loadStats = async () => {
-    try {
-      const [
-        { count: users },
-        { count: socialConnections },
-        { count: campaigns },
-        { count: brands },
-        { count: aiModels },
-        { count: posts },
-      ] = await Promise.all([
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('social_connections').select('*', { count: 'exact', head: true }),
-        supabase.from('campaigns').select('*', { count: 'exact', head: true }),
-        supabase.from('brands').select('*', { count: 'exact', head: true }),
-        supabase.from('ai_models').select('*', { count: 'exact', head: true }),
-        supabase.from('posts_log').select('*', { count: 'exact', head: true }),
-      ])
+    const loadStats = async () => {
+      try {
+        // Use Promise.allSettled to prevent one failed request from breaking others
+        const results = await Promise.allSettled([
+          supabase.from('profiles').select('*', { count: 'exact', head: true }),
+          supabase.from('social_connections').select('*', { count: 'exact', head: true }),
+          supabase.from('campaigns').select('*', { count: 'exact', head: true }),
+          supabase.from('brands').select('*', { count: 'exact', head: true }),
+          supabase.from('ai_models').select('*', { count: 'exact', head: true }),
+          supabase.from('posts_log').select('*', { count: 'exact', head: true }),
+        ])
 
-      setStats({
-        users: users || 0,
-        socialConnections: socialConnections || 0,
-        campaigns: campaigns || 0,
-        brands: brands || 0,
-        aiModels: aiModels || 0,
-        posts: posts || 0,
-      })
-    } catch (error) {
-      console.error('Error loading stats:', error)
-    } finally {
-      setLoading(false)
+        if (mounted) {
+          const [users, socialConnections, campaigns, brands, aiModels, posts] = results.map(result => 
+            result.status === 'fulfilled' ? result.value.count || 0 : 0
+          )
+
+          setStats({
+            users,
+            socialConnections,
+            campaigns,
+            brands,
+            aiModels,
+            posts,
+          })
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error)
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
+      }
     }
-  }
+
+    loadStats()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const statCards = [
     {

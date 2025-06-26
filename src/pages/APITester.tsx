@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
 import { Button } from '../components/ui/Button'
 import { Select } from '../components/ui/Select'
 import { Input } from '../components/ui/Input'
@@ -22,26 +21,8 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
-
-interface SocialConnection {
-  id: string
-  user_id: string
-  provider: string
-  account_id?: string
-  account_name?: string
-  profiles?: {
-    brand_name: string
-    email: string
-  }
-}
-
-interface SocialPage {
-  id: string
-  connection_id: string
-  page_id: string
-  page_name: string
-  provider: string
-}
+import { useSocialConnections, useSocialPages } from '../hooks/useDataLoader'
+import { supabase } from '../lib/supabase'
 
 interface APITestLog {
   id: string
@@ -91,10 +72,10 @@ const PLATFORM_FEATURES = {
 }
 
 export function APITester() {
-  const [connections, setConnections] = useState<SocialConnection[]>([])
-  const [pages, setPages] = useState<SocialPage[]>([])
+  const { data: connections, loading: connectionsLoading, refresh: refreshConnections } = useSocialConnections()
+  const { data: pages, loading: pagesLoading, refresh: refreshPages } = useSocialPages()
+  
   const [testLogs, setTestLogs] = useState<APITestLog[]>([])
-  const [loading, setLoading] = useState(true)
   const [testing, setTesting] = useState(false)
   const [selectedLog, setSelectedLog] = useState<APITestLog | null>(null)
   const [logModalOpen, setLogModalOpen] = useState(false)
@@ -107,32 +88,7 @@ export function APITester() {
   const [testContent, setTestContent] = useState('')
   const [postId, setPostId] = useState('')
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      const [connectionsResult, pagesResult] = await Promise.all([
-        supabase.from('social_connections').select(`
-          *,
-          profiles!social_connections_user_id_fkey(brand_name, email)
-        `).order('created_at', { ascending: false }),
-        supabase.from('social_pages').select('*').order('created_at', { ascending: false })
-      ])
-
-      if (connectionsResult.error) throw connectionsResult.error
-      if (pagesResult.error) throw pagesResult.error
-
-      setConnections(connectionsResult.data || [])
-      setPages(pagesResult.data || [])
-    } catch (error: any) {
-      toast.error('Failed to load data')
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = connectionsLoading || pagesLoading
 
   const runAPITest = async () => {
     if (!selectedPlatform || !selectedConnection || !selectedFeature) {
@@ -163,46 +119,6 @@ export function APITester() {
     setTestLogs(prev => [testLog, ...prev])
 
     try {
-      // DEBUG: Check client-side authentication state
-      console.log('🔍 [API Tester Debug] Checking client-side authentication...')
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-      if (sessionError) {
-        console.error('❌ [API Tester Debug] Session error:', sessionError)
-        throw new Error('Session error: ' + sessionError.message)
-      }
-      
-      if (!session) {
-        console.error('❌ [API Tester Debug] No active session found')
-        throw new Error('No active session - please log in again')
-      }
-      
-      console.log('✅ [API Tester Debug] Session found:', {
-        user_id: session.user?.id,
-        access_token_length: session.access_token?.length,
-        expires_at: session.expires_at,
-        token_type: session.token_type
-      })
-
-      // DEBUG: Check user authentication
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError) {
-        console.error('❌ [API Tester Debug] User error:', userError)
-        throw new Error('User authentication error: ' + userError.message)
-      }
-      
-      if (!user) {
-        console.error('❌ [API Tester Debug] No authenticated user found')
-        throw new Error('No authenticated user - please log in again')
-      }
-      
-      console.log('✅ [API Tester Debug] User authenticated:', {
-        user_id: user.id,
-        email: user.email,
-        role: user.role
-      })
-
       const testParams = {
         platform: selectedPlatform,
         feature: selectedFeature,
@@ -212,13 +128,9 @@ export function APITester() {
         post_id: postId || undefined,
       }
 
-      console.log('📤 [API Tester Debug] Calling Edge Function with params:', testParams)
-
       const { data, error } = await supabase.functions.invoke('api-tester', {
         body: testParams,
       })
-
-      console.log('📥 [API Tester Debug] Edge Function response:', { data, error })
 
       if (error) throw error
 
@@ -242,8 +154,6 @@ export function APITester() {
       }
 
     } catch (error: any) {
-      console.error('❌ [API Tester Debug] Test failed:', error)
-      
       const updatedLog: APITestLog = {
         ...testLog,
         status: 'error',
@@ -426,7 +336,7 @@ export function APITester() {
             Test social media API endpoints and monitor responses
           </p>
         </div>
-        <Button onClick={loadData} variant="secondary">
+        <Button onClick={() => { refreshConnections(); refreshPages(); }} variant="secondary">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -451,6 +361,7 @@ export function APITester() {
                 setSelectedFeature('')
               }}
               options={platformOptions}
+              disabled={loading}
             />
 
             <Select
@@ -461,7 +372,7 @@ export function APITester() {
                 setSelectedPage('')
               }}
               options={connectionOptions}
-              disabled={!selectedPlatform}
+              disabled={!selectedPlatform || loading}
             />
 
             {filteredPages.length > 0 && (
@@ -470,6 +381,7 @@ export function APITester() {
                 value={selectedPage}
                 onChange={(e) => setSelectedPage(e.target.value)}
                 options={pageOptions}
+                disabled={loading}
               />
             )}
 
@@ -478,7 +390,7 @@ export function APITester() {
               value={selectedFeature}
               onChange={(e) => setSelectedFeature(e.target.value)}
               options={featureOptions}
-              disabled={!selectedConnection}
+              disabled={!selectedConnection || loading}
             />
 
             {needsContent && (
@@ -503,7 +415,7 @@ export function APITester() {
             <Button
               onClick={runAPITest}
               loading={testing}
-              disabled={!selectedPlatform || !selectedConnection || !selectedFeature}
+              disabled={!selectedPlatform || !selectedConnection || !selectedFeature || loading}
               className="w-full"
             >
               <Play className="h-4 w-4 mr-2" />

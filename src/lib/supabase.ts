@@ -7,7 +7,78 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+    // Reduce token refresh frequency
+    storage: window.localStorage,
+    storageKey: 'supabase.auth.token',
+  },
+  // Add request throttling
+  global: {
+    headers: {
+      'X-Client-Info': 'autoauthor-admin@1.0.0',
+    },
+  },
+})
+
+// Create a request cache to prevent duplicate requests
+const requestCache = new Map<string, Promise<any>>()
+const CACHE_DURATION = 30000 // 30 seconds
+
+// Helper function to create cache keys
+function createCacheKey(table: string, query: any): string {
+  return `${table}:${JSON.stringify(query)}`
+}
+
+// Cached query wrapper
+export async function cachedQuery<T>(
+  table: string,
+  queryBuilder: () => any,
+  cacheKey?: string
+): Promise<{ data: T[] | null; error: any }> {
+  const key = cacheKey || createCacheKey(table, queryBuilder.toString())
+  
+  // Check if we have a pending request for this query
+  if (requestCache.has(key)) {
+    return requestCache.get(key)
+  }
+
+  // Create the request promise
+  const requestPromise = (async () => {
+    try {
+      const result = await queryBuilder()
+      return result
+    } catch (error) {
+      console.error(`Cached query error for ${table}:`, error)
+      return { data: null, error }
+    } finally {
+      // Remove from cache after duration
+      setTimeout(() => {
+        requestCache.delete(key)
+      }, CACHE_DURATION)
+    }
+  })()
+
+  // Store the promise in cache
+  requestCache.set(key, requestPromise)
+  
+  return requestPromise
+}
+
+// Debounced function helper
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
 
 // Database types based on actual schema
 export interface Profile {

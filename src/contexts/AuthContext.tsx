@@ -25,13 +25,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Listen for auth changes - this will fire immediately with current session
+    let mounted = true
+
+    // Get initial session
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          console.error('Error getting session:', error)
+          return
+        }
+        
+        if (mounted) {
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Session fetch error:', error)
+        if (mounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    getInitialSession()
+
+    // Listen for auth changes - but don't set loading state here
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      setLoading(false)
+      if (mounted) {
+        setUser(session?.user ?? null)
+      }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {

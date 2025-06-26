@@ -20,39 +20,74 @@ import {
   Facebook,
   Activity,
   Send,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const navigation = [
+interface NavigationItem {
+  name: string
+  href?: string
+  icon: React.ComponentType<any>
+  badge?: string
+  children?: NavigationItem[]
+}
+
+const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'User Profiles', href: '/users', icon: Users },
-  { name: 'User Management', href: '/user-management', icon: UserCog },
-  { name: 'Social Connections', href: '/social-connections', icon: Share2 },
-  { name: 'Social Pages', href: '/social-pages', icon: Globe },
-  { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
+  {
+    name: 'Users',
+    icon: Users,
+    children: [
+      { name: 'User Profiles', href: '/users', icon: Users },
+      { name: 'User Management', href: '/user-management', icon: UserCog },
+    ]
+  },
+  {
+    name: 'Social Media',
+    icon: Share2,
+    children: [
+      { name: 'Social Connections', href: '/social-connections', icon: Share2 },
+      { name: 'Social Pages', href: '/social-pages', icon: Globe },
+      { name: 'Campaigns', href: '/campaigns', icon: Megaphone },
+      { name: 'Content Log', href: '/content-log', icon: FileText },
+      { name: 'Analytics', href: '/analytics', icon: TrendingUp },
+    ]
+  },
   { name: 'Brands', href: '/brands', icon: Palette },
   { name: 'AI Configuration', href: '/ai-config', icon: Bot },
-  { name: 'Content Log', href: '/content-log', icon: FileText },
-  { name: 'Survey Data', href: '/surveys', icon: BarChart3 },
-  { name: 'Survey Management', href: '/survey-management', icon: Settings },
-  { name: 'Analytics', href: '/analytics', icon: TrendingUp },
-  { 
-    name: 'Facebook Accounts', 
-    href: '/facebook-accounts', 
+  {
+    name: 'Surveys',
+    icon: BarChart3,
+    children: [
+      { name: 'Survey Data', href: '/surveys', icon: BarChart3 },
+      { name: 'Survey Management', href: '/survey-management', icon: Settings },
+    ]
+  },
+  {
+    name: 'Facebook Review',
     icon: Facebook,
-    badge: 'FB Review'
-  },
-  { 
-    name: 'Facebook API Logs', 
-    href: '/facebook-api-logs', 
-    icon: Activity,
-    badge: 'FB Review'
-  },
-  { 
-    name: 'Manual Post Trigger', 
-    href: '/manual-post-trigger', 
-    icon: Send,
-    badge: 'FB Review'
+    badge: 'FB Review',
+    children: [
+      { 
+        name: 'Facebook Accounts', 
+        href: '/facebook-accounts', 
+        icon: Facebook,
+        badge: 'FB Review'
+      },
+      { 
+        name: 'Facebook API Logs', 
+        href: '/facebook-api-logs', 
+        icon: Activity,
+        badge: 'FB Review'
+      },
+      { 
+        name: 'Manual Post Trigger', 
+        href: '/manual-post-trigger', 
+        icon: Send,
+        badge: 'FB Review'
+      },
+    ]
   },
 ]
 
@@ -62,6 +97,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(['Social Media', 'Facebook Review'])
   const { user, signOut } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -70,6 +106,90 @@ export function Layout({ children }: LayoutProps) {
     signOut()
     navigate('/login')
     toast.success('Signed out successfully')
+  }
+
+  const toggleGroup = (groupName: string) => {
+    setExpandedGroups(prev => 
+      prev.includes(groupName) 
+        ? prev.filter(name => name !== groupName)
+        : [...prev, groupName]
+    )
+  }
+
+  const isGroupExpanded = (groupName: string) => expandedGroups.includes(groupName)
+
+  const isActiveRoute = (href?: string) => {
+    if (!href) return false
+    return location.pathname === href
+  }
+
+  const isGroupActive = (children?: NavigationItem[]) => {
+    if (!children) return false
+    return children.some(child => isActiveRoute(child.href))
+  }
+
+  const renderNavigationItem = (item: NavigationItem, isChild = false) => {
+    const Icon = item.icon
+    const hasChildren = item.children && item.children.length > 0
+    const isExpanded = isGroupExpanded(item.name)
+    const isActive = isActiveRoute(item.href)
+    const isGroupActiveState = isGroupActive(item.children)
+
+    if (hasChildren) {
+      return (
+        <div key={item.name}>
+          <button
+            onClick={() => toggleGroup(item.name)}
+            className={`group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md ${
+              isGroupActiveState
+                ? 'bg-primary-100 text-primary-900'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
+            <span className="flex-1 text-left">{item.name}</span>
+            {item.badge && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                {item.badge}
+              </span>
+            )}
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+          {isExpanded && (
+            <div className="ml-6 mt-1 space-y-1">
+              {item.children?.map(child => renderNavigationItem(child, true))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <Link
+        key={item.name}
+        to={item.href!}
+        onClick={() => setSidebarOpen(false)}
+        className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+          isChild ? 'ml-2' : ''
+        } ${
+          isActive
+            ? 'bg-primary-100 text-primary-900'
+            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+        }`}
+      >
+        <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
+        <span className="flex-1">{item.name}</span>
+        {item.badge && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+            {item.badge}
+          </span>
+        )}
+      </Link>
+    )
   }
 
   return (
@@ -88,30 +208,7 @@ export function Layout({ children }: LayoutProps) {
             </button>
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                    isActive
-                      ? 'bg-primary-100 text-primary-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1">{item.name}</span>
-                  {item.badge && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
+            {navigation.map(item => renderNavigationItem(item))}
           </nav>
         </div>
       </div>
@@ -123,29 +220,7 @@ export function Layout({ children }: LayoutProps) {
             <h1 className="text-xl font-bold text-gray-900">AutoAuthor Admin</h1>
           </div>
           <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const isActive = location.pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                    isActive
-                      ? 'bg-primary-100 text-primary-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <Icon className="mr-3 h-5 w-5 flex-shrink-0" />
-                  <span className="flex-1">{item.name}</span>
-                  {item.badge && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
+            {navigation.map(item => renderNavigationItem(item))}
           </nav>
         </div>
       </div>

@@ -4,6 +4,10 @@ import { useAdminGuard } from '../lib/useadminguard';
 import { Layout } from '../components/Layout';
 import { Table } from '../components/ui/Table';
 import { Button } from '../components/ui/Button';
+import { Modal } from '../components/ui/Modal';
+import { RefreshCw, Eye, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { format } from 'date-fns';
 
 interface FacebookAPILog {
   id: string;
@@ -29,13 +33,14 @@ const FacebookAPILogs: React.FC = () => {
   const [logs, setLogs] = useState<FacebookAPILog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedLog, setSelectedLog] = useState<FacebookAPILog | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   const loadLogs = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Query facebook_api_logs and join with users, then profiles
       const { data, error: fetchError } = await supabase
         .from('facebook_api_logs')
         .select(`
@@ -71,7 +76,7 @@ const FacebookAPILogs: React.FC = () => {
   }, [isAdmin, authLoading]);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
+    return format(new Date(dateString), 'MMM d, yyyy HH:mm:ss');
   };
 
   const formatJSON = (obj: any) => {
@@ -86,12 +91,28 @@ const FacebookAPILogs: React.FC = () => {
     return 'text-gray-600';
   };
 
+  const getStatusIcon = (code: number) => {
+    if (code >= 200 && code < 300) return <CheckCircle className="h-4 w-4 text-green-500" />;
+    if (code >= 400) return <AlertCircle className="h-4 w-4 text-red-500" />;
+    return <Clock className="h-4 w-4 text-gray-500" />;
+  };
+
   const getUserInfo = (log: FacebookAPILog) => {
     const profile = log.users?.profiles?.[0];
     if (profile) {
       return `${profile.brand_name}${profile.email ? ` (${profile.email})` : ''}`;
     }
     return log.user_id || 'Unknown';
+  };
+
+  const handleRowClick = (log: FacebookAPILog) => {
+    setSelectedLog(log);
+    setDetailModalOpen(true);
+  };
+
+  const truncateEndpoint = (endpoint: string) => {
+    if (endpoint.length <= 40) return endpoint;
+    return `${endpoint.substring(0, 37)}...`;
   };
 
   if (authLoading) {
@@ -117,7 +138,7 @@ const FacebookAPILogs: React.FC = () => {
   const columns = [
     {
       key: 'created_at',
-      header: 'Timestamp',
+      label: 'Timestamp',
       render: (log: FacebookAPILog) => (
         <span className="text-sm text-gray-600">
           {formatDate(log.created_at)}
@@ -126,16 +147,18 @@ const FacebookAPILogs: React.FC = () => {
     },
     {
       key: 'user',
-      header: 'User',
+      label: 'User',
       render: (log: FacebookAPILog) => (
-        <span className="text-sm">
-          {getUserInfo(log)}
-        </span>
+        <div className="max-w-xs">
+          <span className="text-sm truncate block">
+            {getUserInfo(log)}
+          </span>
+        </div>
       )
     },
     {
       key: 'action_type',
-      header: 'Action',
+      label: 'Action',
       render: (log: FacebookAPILog) => (
         <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
           {log.action_type}
@@ -144,71 +167,158 @@ const FacebookAPILogs: React.FC = () => {
     },
     {
       key: 'method',
-      header: 'Method',
+      label: 'Method',
       render: (log: FacebookAPILog) => (
-        <span className="font-mono text-sm">
+        <span className="font-mono text-sm font-medium">
           {log.method}
         </span>
       )
     },
     {
       key: 'endpoint',
-      header: 'Endpoint',
+      label: 'Endpoint',
       render: (log: FacebookAPILog) => (
-        <span className="font-mono text-sm text-gray-600 truncate max-w-xs">
-          {log.endpoint}
+        <span className="font-mono text-sm text-gray-600" title={log.endpoint}>
+          {truncateEndpoint(log.endpoint)}
         </span>
       )
     },
     {
       key: 'response_code',
-      header: 'Status',
+      label: 'Status',
       render: (log: FacebookAPILog) => (
-        <span className={`font-bold ${getStatusColor(log.response_code)}`}>
-          {log.response_code}
-        </span>
+        <div className="flex items-center space-x-2">
+          {getStatusIcon(log.response_code)}
+          <span className={`font-bold ${getStatusColor(log.response_code)}`}>
+            {log.response_code}
+          </span>
+        </div>
       )
     },
     {
-      key: 'error_message',
-      header: 'Error',
+      key: 'actions',
+      label: 'Actions',
       render: (log: FacebookAPILog) => (
-        <span className="text-sm text-red-600 truncate max-w-xs">
-          {log.error_message || '-'}
-        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => handleRowClick(log)}
+          title="View details"
+        >
+          <Eye className="h-4 w-4" />
+        </Button>
       )
     }
   ];
+
+  const stats = {
+    total: logs.length,
+    success: logs.filter(log => log.response_code >= 200 && log.response_code < 300).length,
+    clientErrors: logs.filter(log => log.response_code >= 400 && log.response_code < 500).length,
+    serverErrors: logs.filter(log => log.response_code >= 500).length,
+  };
 
   return (
     <Layout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Facebook API Logs</h1>
-          <Button onClick={loadLogs} disabled={loading}>
-            {loading ? 'Loading...' : 'Refresh'}
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Facebook API Logs</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Monitor Facebook API requests and responses for debugging and analytics
+            </p>
+          </div>
+          <Button onClick={loadLogs} disabled={loading} variant="secondary">
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
         </div>
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="text-red-800">
-              <strong>Error:</strong> {error}
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+              <div className="text-red-800">
+                <strong>Error:</strong> {error}
+              </div>
             </div>
           </div>
         )}
 
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">T</span>
+                  </div>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Total Requests</dt>
+                    <dd className="text-lg font-medium text-gray-900">{stats.total}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                    <CheckCircle className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Success (2xx)</dt>
+                    <dd className="text-lg font-medium text-gray-900">{stats.success}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">4xx</span>
+                  </div>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Client Errors</dt>
+                    <dd className="text-lg font-medium text-gray-900">{stats.clientErrors}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white overflow-hidden shadow rounded-lg">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                    <span className="text-white text-sm font-medium">5xx</span>
+                  </div>
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Server Errors</dt>
+                    <dd className="text-lg font-medium text-gray-900">{stats.serverErrors}</dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <div className="mb-4">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                API Request Logs
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Monitor Facebook API requests and responses for debugging and analytics.
-              </p>
-            </div>
-
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-gray-500">Loading logs...</div>
@@ -221,44 +331,107 @@ const FacebookAPILogs: React.FC = () => {
               <Table
                 data={logs}
                 columns={columns}
-                onRowClick={(log) => {
-                  // Show detailed view in a modal or expand row
-                  console.log('Log details:', log);
-                }}
+                loading={loading}
               />
             )}
           </div>
         </div>
 
-        {logs.length > 0 && (
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-              <div>
-                <span className="text-gray-500">Total Requests:</span>
-                <span className="ml-2 font-medium">{logs.length}</span>
+        {/* Detail Modal */}
+        <Modal
+          isOpen={detailModalOpen}
+          onClose={() => {
+            setDetailModalOpen(false);
+            setSelectedLog(null);
+          }}
+          title="API Log Details"
+          size="xl"
+        >
+          {selectedLog && (
+            <div className="space-y-6">
+              {/* Header Info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Request Info</h4>
+                  <div className="bg-gray-50 rounded-md p-3 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">Method:</span>
+                      <span className="text-sm font-mono">{selectedLog.method}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">Action:</span>
+                      <span className="text-sm">{selectedLog.action_type}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">Status:</span>
+                      <div className="flex items-center space-x-1">
+                        {getStatusIcon(selectedLog.response_code)}
+                        <span className={`text-sm font-bold ${getStatusColor(selectedLog.response_code)}`}>
+                          {selectedLog.response_code}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">Timestamp:</span>
+                      <span className="text-sm">{formatDate(selectedLog.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">User Info</h4>
+                  <div className="bg-gray-50 rounded-md p-3">
+                    <div className="text-sm">{getUserInfo(selectedLog)}</div>
+                    {selectedLog.user_id && (
+                      <div className="text-xs text-gray-500 mt-1">ID: {selectedLog.user_id}</div>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* Endpoint */}
               <div>
-                <span className="text-gray-500">Success (2xx):</span>
-                <span className="ml-2 font-medium text-green-600">
-                  {logs.filter(log => log.response_code >= 200 && log.response_code < 300).length}
-                </span>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Endpoint</h4>
+                <div className="bg-gray-50 rounded-md p-3">
+                  <code className="text-sm text-gray-700 break-all">{selectedLog.endpoint}</code>
+                </div>
               </div>
-              <div>
-                <span className="text-gray-500">Client Errors (4xx):</span>
-                <span className="ml-2 font-medium text-yellow-600">
-                  {logs.filter(log => log.response_code >= 400 && log.response_code < 500).length}
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-500">Server Errors (5xx):</span>
-                <span className="ml-2 font-medium text-red-600">
-                  {logs.filter(log => log.response_code >= 500).length}
-                </span>
-              </div>
+
+              {/* Request Body */}
+              {selectedLog.request_body && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Request Body</h4>
+                  <div className="bg-gray-50 rounded-md p-3 max-h-64 overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {formatJSON(selectedLog.request_body)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Response Body */}
+              {selectedLog.response_body && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Response Body</h4>
+                  <div className="bg-gray-50 rounded-md p-3 max-h-64 overflow-y-auto">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap">
+                      {formatJSON(selectedLog.response_body)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {selectedLog.error_message && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Error Message</h4>
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-sm text-red-700">{selectedLog.error_message}</p>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+        </Modal>
       </div>
     </Layout>
   );

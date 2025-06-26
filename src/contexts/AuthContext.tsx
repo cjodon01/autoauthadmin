@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      setLoading(false)
+      // Removed setLoading(false) to prevent unnecessary re-renders and token refresh attempts
     })
 
     return () => subscription.unsubscribe()

@@ -265,3 +265,5 @@ const FacebookAPILogs: React.FC = () => {
 };
 
 export default FacebookAPILogs;
+
+export { FacebookAPILogs }

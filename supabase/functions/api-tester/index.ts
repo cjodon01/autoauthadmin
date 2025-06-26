@@ -22,47 +22,107 @@ serve(async (req) => {
   }
 
   try {
+    // DEBUG: Log all incoming headers for debugging
+    console.log('🔍 [API Tester Debug] Incoming request headers:')
+    for (const [key, value] of req.headers.entries()) {
+      if (key.toLowerCase() === 'authorization') {
+        console.log(`  ${key}: ${value ? `Bearer ${value.substring(7, 20)}...` : 'MISSING'}`)
+      } else {
+        console.log(`  ${key}: ${value}`)
+      }
+    }
+
+    // DEBUG: Check environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    
+    console.log('🔍 [API Tester Debug] Environment variables:')
+    console.log(`  SUPABASE_URL: ${supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING'}`)
+    console.log(`  SUPABASE_ANON_KEY: ${supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'MISSING'}`)
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Missing Supabase environment variables')
+    }
+
     // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    )
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
 
     // Verify authentication
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
+      console.error('❌ [API Tester Debug] No authorization header found')
       throw new Error('No authorization header')
     }
 
+    console.log('✅ [API Tester Debug] Authorization header found')
+
     const token = authHeader.replace('Bearer ', '')
+    console.log(`🔍 [API Tester Debug] Token length: ${token.length}`)
+
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
     
-    if (userError || !user) {
-      throw new Error('Invalid authentication')
+    if (userError) {
+      console.error('❌ [API Tester Debug] User authentication error:', userError)
+      throw new Error('Invalid authentication: ' + userError.message)
     }
+    
+    if (!user) {
+      console.error('❌ [API Tester Debug] No user found from token')
+      throw new Error('Invalid authentication - no user found')
+    }
+
+    console.log('✅ [API Tester Debug] User authenticated successfully:', {
+      user_id: user.id,
+      email: user.email,
+      role: user.role
+    })
 
     // Parse request body
     const params: TestParams = await req.json()
     const { platform, feature, connection_id, page_id, content, post_id } = params
+
+    console.log('📥 [API Tester Debug] Request parameters:', {
+      platform,
+      feature,
+      connection_id,
+      page_id: page_id || 'none',
+      content_length: content?.length || 0,
+      post_id: post_id || 'none'
+    })
 
     if (!platform || !feature || !connection_id) {
       throw new Error('Missing required parameters: platform, feature, connection_id')
     }
 
     // Get the social connection
+    console.log('🔍 [API Tester Debug] Fetching social connection...')
     const { data: connection, error: connectionError } = await supabaseClient
       .from('social_connections')
       .select('*')
       .eq('id', connection_id)
       .single()
 
-    if (connectionError || !connection) {
+    if (connectionError) {
+      console.error('❌ [API Tester Debug] Connection fetch error:', connectionError)
+      throw new Error('Social connection not found: ' + connectionError.message)
+    }
+
+    if (!connection) {
+      console.error('❌ [API Tester Debug] No connection data returned')
       throw new Error('Social connection not found')
     }
+
+    console.log('✅ [API Tester Debug] Connection found:', {
+      id: connection.id,
+      provider: connection.provider,
+      user_id: connection.user_id,
+      has_token: !!connection.oauth_user_token
+    })
 
     // Get page details if page_id is provided
     let page = null
     if (page_id) {
+      console.log('🔍 [API Tester Debug] Fetching social page...')
       const { data: pageData, error: pageError } = await supabaseClient
         .from('social_pages')
         .select('*')
@@ -70,24 +130,45 @@ serve(async (req) => {
         .single()
 
       if (pageError) {
-        throw new Error('Social page not found')
+        console.error('❌ [API Tester Debug] Page fetch error:', pageError)
+        throw new Error('Social page not found: ' + pageError.message)
       }
+      
       page = pageData
+      console.log('✅ [API Tester Debug] Page found:', {
+        id: page.id,
+        page_name: page.page_name,
+        provider: page.provider,
+        has_access_token: !!page.page_access_token
+      })
     }
 
     // Execute the API test based on platform and feature
+    console.log('🚀 [API Tester Debug] Executing API test...')
     const result = await executeAPITest(platform, feature, connection, page, { content, post_id })
 
-    // Log the API test
-    await supabaseClient.from('facebook_api_logs').insert([{
-      user_id: connection.user_id,
+    console.log('✅ [API Tester Debug] API test completed:', {
       endpoint: result.endpoint,
-      method: result.method || 'GET',
-      response_code: result.status_code || 200,
-      action_type: `api_test_${feature}`,
-      request_body: result.request_body,
-      response_body: result.response,
-    }])
+      status_code: result.status_code,
+      summary: result.summary
+    })
+
+    // Log the API test
+    try {
+      await supabaseClient.from('facebook_api_logs').insert([{
+        user_id: connection.user_id,
+        endpoint: result.endpoint,
+        method: result.method || 'GET',
+        response_code: result.status_code || 200,
+        action_type: `api_test_${feature}`,
+        request_body: result.request_body,
+        response_body: result.response,
+      }])
+      console.log('✅ [API Tester Debug] API test logged successfully')
+    } catch (logError) {
+      console.error('⚠️ [API Tester Debug] Failed to log API test:', logError)
+      // Don't throw here, just log the warning
+    }
 
     return new Response(
       JSON.stringify({
@@ -102,7 +183,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('API tester function error:', error)
+    console.error('❌ [API Tester Debug] Function error:', error)
     return new Response(
       JSON.stringify({
         success: false,
@@ -123,6 +204,8 @@ async function executeAPITest(
   page: any, 
   options: { content?: string, post_id?: string }
 ) {
+  console.log(`🔍 [API Tester Debug] Executing ${platform} ${feature}...`)
+  
   switch (platform) {
     case 'facebook':
     case 'instagram':
@@ -147,11 +230,17 @@ async function testFacebookAPI(
   const baseUrl = 'https://graph.facebook.com/v18.0'
   const token = page?.page_access_token || connection.oauth_user_token
 
+  console.log(`🔍 [Facebook API Debug] Testing ${feature} with token: ${token ? 'present' : 'missing'}`)
+
   switch (feature) {
     case 'list_pages': {
       const endpoint = `${baseUrl}/me/accounts`
+      console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
+      
       const response = await fetch(`${endpoint}?access_token=${token}`)
       const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
       
       return {
         endpoint,
@@ -165,8 +254,12 @@ async function testFacebookAPI(
     case 'list_posts': {
       const pageId = page?.page_id || 'me'
       const endpoint = `${baseUrl}/${pageId}/posts`
+      console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
+      
       const response = await fetch(`${endpoint}?access_token=${token}&limit=10`)
       const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
       
       return {
         endpoint,
@@ -184,6 +277,8 @@ async function testFacebookAPI(
       
       const pageId = page?.page_id || 'me'
       const endpoint = `${baseUrl}/${pageId}/feed`
+      console.log(`📤 [Facebook API Debug] POST ${endpoint}`)
+      
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -193,6 +288,8 @@ async function testFacebookAPI(
         }),
       })
       const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
       
       return {
         endpoint,
@@ -210,8 +307,12 @@ async function testFacebookAPI(
       }
       
       const endpoint = `${baseUrl}/${options.post_id}`
+      console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
+      
       const response = await fetch(`${endpoint}?fields=likes.summary(true),comments.summary(true),shares&access_token=${token}`)
       const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
       
       return {
         endpoint,
@@ -228,8 +329,12 @@ async function testFacebookAPI(
       }
       
       const endpoint = `${baseUrl}/${options.post_id}/insights`
+      console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
+      
       const response = await fetch(`${endpoint}?metric=post_impressions,post_clicks&access_token=${token}`)
       const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
       
       return {
         endpoint,
@@ -254,13 +359,19 @@ async function testLinkedInAPI(
   const baseUrl = 'https://api.linkedin.com/v2'
   const token = connection.oauth_user_token
 
+  console.log(`🔍 [LinkedIn API Debug] Testing ${feature} with token: ${token ? 'present' : 'missing'}`)
+
   switch (feature) {
     case 'list_organizations': {
       const endpoint = `${baseUrl}/organizationAcls`
+      console.log(`📤 [LinkedIn API Debug] GET ${endpoint}`)
+      
       const response = await fetch(endpoint, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
+      
+      console.log(`📥 [LinkedIn API Debug] Response: ${response.status}`, data)
       
       return {
         endpoint,
@@ -273,10 +384,14 @@ async function testLinkedInAPI(
 
     case 'list_posts': {
       const endpoint = `${baseUrl}/shares`
+      console.log(`📤 [LinkedIn API Debug] GET ${endpoint}`)
+      
       const response = await fetch(`${endpoint}?q=owners&owners=urn:li:person:${connection.account_id}&count=10`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()
+      
+      console.log(`📥 [LinkedIn API Debug] Response: ${response.status}`, data)
       
       return {
         endpoint,
@@ -288,6 +403,7 @@ async function testLinkedInAPI(
     }
 
     default:
+      console.log(`⚠️ [LinkedIn API Debug] Feature ${feature} not implemented`)
       return {
         endpoint: `${baseUrl}/${feature}`,
         method: 'GET',
@@ -304,6 +420,7 @@ async function testTwitterAPI(
   page: any, 
   options: { content?: string, post_id?: string }
 ) {
+  console.log(`⚠️ [Twitter API Debug] Feature ${feature} not implemented`)
   // Twitter API implementation would go here
   return {
     endpoint: `https://api.twitter.com/2/${feature}`,
@@ -320,6 +437,7 @@ async function testRedditAPI(
   page: any, 
   options: { content?: string, post_id?: string }
 ) {
+  console.log(`⚠️ [Reddit API Debug] Feature ${feature} not implemented`)
   // Reddit API implementation would go here
   return {
     endpoint: `https://oauth.reddit.com/${feature}`,

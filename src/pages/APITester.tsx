@@ -163,6 +163,46 @@ export function APITester() {
     setTestLogs(prev => [testLog, ...prev])
 
     try {
+      // DEBUG: Check client-side authentication state
+      console.log('🔍 [API Tester Debug] Checking client-side authentication...')
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError) {
+        console.error('❌ [API Tester Debug] Session error:', sessionError)
+        throw new Error('Session error: ' + sessionError.message)
+      }
+      
+      if (!session) {
+        console.error('❌ [API Tester Debug] No active session found')
+        throw new Error('No active session - please log in again')
+      }
+      
+      console.log('✅ [API Tester Debug] Session found:', {
+        user_id: session.user?.id,
+        access_token_length: session.access_token?.length,
+        expires_at: session.expires_at,
+        token_type: session.token_type
+      })
+
+      // DEBUG: Check user authentication
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError) {
+        console.error('❌ [API Tester Debug] User error:', userError)
+        throw new Error('User authentication error: ' + userError.message)
+      }
+      
+      if (!user) {
+        console.error('❌ [API Tester Debug] No authenticated user found')
+        throw new Error('No authenticated user - please log in again')
+      }
+      
+      console.log('✅ [API Tester Debug] User authenticated:', {
+        user_id: user.id,
+        email: user.email,
+        role: user.role
+      })
+
       const testParams = {
         platform: selectedPlatform,
         feature: selectedFeature,
@@ -172,9 +212,13 @@ export function APITester() {
         post_id: postId || undefined,
       }
 
+      console.log('📤 [API Tester Debug] Calling Edge Function with params:', testParams)
+
       const { data, error } = await supabase.functions.invoke('api-tester', {
         body: testParams,
       })
+
+      console.log('📥 [API Tester Debug] Edge Function response:', { data, error })
 
       if (error) throw error
 
@@ -198,6 +242,8 @@ export function APITester() {
       }
 
     } catch (error: any) {
+      console.error('❌ [API Tester Debug] Test failed:', error)
+      
       const updatedLog: APITestLog = {
         ...testLog,
         status: 'error',

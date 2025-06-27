@@ -6,7 +6,6 @@ import { Table } from '../components/ui/Table';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { RefreshCw, Eye, AlertCircle, CheckCircle, Clock } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
 interface FacebookAPILog {

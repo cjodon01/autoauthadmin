@@ -34,7 +34,7 @@ serve(async (req) => {
 
     // DEBUG: Check environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const supabaseAnonKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     
     console.log('🔍 [API Tester Debug] Environment variables:')
     console.log(`  SUPABASE_URL: ${supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING'}`)

@@ -19,11 +19,9 @@ interface FacebookAPILog {
   response_body?: any;
   error_message?: string;
   created_at: string;
-  users?: {
-    profiles: {
-      brand_name: string;
-      email?: string;
-    }[];
+  profiles?: {
+    brand_name: string;
+    email?: string;
   };
 }
 
@@ -44,11 +42,9 @@ const FacebookAPILogs: React.FC = () => {
         .from('facebook_api_logs')
         .select(`
           *,
-          users!facebook_api_logs_user_id_fkey(
-            profiles!profiles_user_id_fkey(
-              brand_name,
-              email
-            )
+          profiles!inner(
+            brand_name,
+            email
           )
         `)
         .order('created_at', { ascending: false })
@@ -97,9 +93,8 @@ const FacebookAPILogs: React.FC = () => {
   };
 
   const getUserInfo = (log: FacebookAPILog) => {
-    const profile = log.users?.profiles?.[0];
-    if (profile) {
-      return `${profile.brand_name}${profile.email ? ` (${profile.email})` : ''}`;
+    if (log.profiles) {
+      return `${log.profiles.brand_name}${log.profiles.email ? ` (${log.profiles.email})` : ''}`;
     }
     return log.user_id || 'Unknown';
   };

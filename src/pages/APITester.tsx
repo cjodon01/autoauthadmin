@@ -72,6 +72,8 @@ const PLATFORM_FEATURES = {
     { value: 'list_tweets', label: 'List Recent Tweets', requiresPage: false, scope: 'account' },
     { value: 'post_tweet', label: 'Post a Tweet', requiresPage: false, scope: 'account' },
     { value: 'get_engagements', label: 'Get Tweet Engagements', requiresPage: false, scope: 'account' },
+    { value: 'get_user_info', label: 'Get User Info', requiresPage: false, scope: 'account' },
+    { value: 'search_tweets', label: 'Search Tweets', requiresPage: false, scope: 'account' },
   ],
   reddit: [
     { value: 'list_subreddits', label: 'List User Subreddits', requiresPage: false, scope: 'account' },

@@ -574,14 +574,157 @@ async function testTwitterAPI(
   page: any, 
   options: { content?: string, post_id?: string }
 ) {
-  console.log(`⚠️ [Twitter API Debug] Feature ${feature} not implemented`)
-  // Twitter API implementation would go here
-  return {
-    endpoint: `https://api.twitter.com/2/${feature}`,
-    method: 'GET',
-    status_code: 501,
-    summary: `Twitter ${feature} not implemented yet`,
-    response: { message: 'Twitter API not implemented' },
+  const baseUrl = 'https://api.twitter.com/2'
+  const token = connection.oauth_user_token
+
+  console.log(`🔍 [Twitter API Debug] Testing ${feature} with token: ${token ? 'present' : 'missing'}`)
+
+  switch (feature) {
+    case 'list_tweets': {
+      const endpoint = `${baseUrl}/users/me/tweets`
+      console.log(`📤 [Twitter API Debug] GET ${endpoint}`)
+      
+      const response = await fetch(`${endpoint}?max_results=10&tweet.fields=created_at,public_metrics`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      const data = await response.json()
+      
+      console.log(`📥 [Twitter API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'GET',
+        status_code: response.status,
+        summary: `Found ${data.data?.length || 0} recent tweets`,
+        response: data,
+      }
+    }
+
+    case 'post_tweet': {
+      if (!options.content) {
+        throw new Error('Content is required for posting a tweet')
+      }
+      
+      const endpoint = `${baseUrl}/tweets`
+      console.log(`📤 [Twitter API Debug] POST ${endpoint}`)
+      
+      const postData = {
+        text: options.content
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(postData)
+      })
+      const data = await response.json()
+      
+      console.log(`📥 [Twitter API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'POST',
+        status_code: response.status,
+        request_body: postData,
+        summary: response.ok ? `Tweet posted: ${data.data?.id}` : 'Tweet failed',
+        response: data,
+      }
+    }
+
+    case 'get_engagements': {
+      if (!options.post_id) {
+        throw new Error('Tweet ID is required for engagement data')
+      }
+      
+      const endpoint = `${baseUrl}/tweets/${options.post_id}`
+      console.log(`📤 [Twitter API Debug] GET ${endpoint}`)
+      
+      const response = await fetch(`${endpoint}?tweet.fields=public_metrics,created_at`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      const data = await response.json()
+      
+      console.log(`📥 [Twitter API Debug] Response: ${response.status}`, data)
+      
+      const metrics = data.data?.public_metrics
+      const summary = metrics 
+        ? `Likes: ${metrics.like_count || 0}, Retweets: ${metrics.retweet_count || 0}, Replies: ${metrics.reply_count || 0}`
+        : 'No engagement data available'
+      
+      return {
+        endpoint,
+        method: 'GET',
+        status_code: response.status,
+        summary,
+        response: data,
+      }
+    }
+
+    case 'get_user_info': {
+      const endpoint = `${baseUrl}/users/me`
+      console.log(`📤 [Twitter API Debug] GET ${endpoint}`)
+      
+      const response = await fetch(`${endpoint}?user.fields=created_at,description,location,public_metrics,verified`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      const data = await response.json()
+      
+      console.log(`📥 [Twitter API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'GET',
+        status_code: response.status,
+        summary: `User: ${data.data?.username || 'Unknown'} (${data.data?.public_metrics?.followers_count || 0} followers)`,
+        response: data,
+      }
+    }
+
+    case 'search_tweets': {
+      const query = options.content || 'from:me'
+      const endpoint = `${baseUrl}/tweets/search/recent`
+      console.log(`📤 [Twitter API Debug] GET ${endpoint}`)
+      
+      const response = await fetch(`${endpoint}?query=${encodeURIComponent(query)}&max_results=10&tweet.fields=created_at,public_metrics`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      const data = await response.json()
+      
+      console.log(`📥 [Twitter API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'GET',
+        status_code: response.status,
+        summary: `Found ${data.data?.length || 0} tweets matching query`,
+        response: data,
+      }
+    }
+
+    default:
+      console.log(`⚠️ [Twitter API Debug] Feature ${feature} not implemented`)
+      return {
+        endpoint: `${baseUrl}/${feature}`,
+        method: 'GET',
+        status_code: 501,
+        summary: `Twitter ${feature} not implemented yet`,
+        response: { message: 'Feature not implemented' },
+      }
   }
 }
 

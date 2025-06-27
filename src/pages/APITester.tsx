@@ -258,7 +258,7 @@ export function APITester() {
   ]
 
   const featureOptions = [
-    { value: '', label: 'Select Feature' },
+    { value: '', label: 'Select Feature', scope: 'none' },
     ...(selectedPlatform ? PLATFORM_FEATURES[selectedPlatform as keyof typeof PLATFORM_FEATURES] || [] : []).map(f => ({
       value: f.value,
       label: f.label,

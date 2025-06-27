@@ -145,7 +145,7 @@ serve(async (req) => {
 
     // Execute the API test based on platform and feature
     console.log('🚀 [API Tester Debug] Executing API test...')
-    const result = await executeAPITest(platform, feature, connection, page, { content, post_id })
+    const result = await executeAPITest(platform, feature, connection, page, { content, post_id }, supabaseClient)
 
     console.log('✅ [API Tester Debug] API test completed:', {
       endpoint: result.endpoint,
@@ -202,7 +202,8 @@ async function executeAPITest(
   feature: string, 
   connection: any, 
   page: any, 
-  options: { content?: string, post_id?: string }
+  options: { content?: string, post_id?: string },
+  supabaseClient: any
 ) {
   console.log(`🔍 [API Tester Debug] Executing ${platform} ${feature}...`)
   
@@ -213,11 +214,75 @@ async function executeAPITest(
     case 'linkedin':
       return await testLinkedInAPI(feature, connection, page, options)
     case 'twitter':
-      return await testTwitterAPI(feature, connection, page, options)
+      return await testTwitterAPI(feature, connection, page, options, supabaseClient)
     case 'reddit':
       return await testRedditAPI(feature, connection, page, options)
     default:
       throw new Error(`Unsupported platform: ${platform}`)
+  }
+}
+
+async function refreshTwitterToken(refreshToken: string, supabaseClient: any, socialConnectionId: string) {
+  console.log("Attempting to refresh Twitter token...");
+  const tokenUrl = "https://api.twitter.com/2/oauth2/token";
+  const clientId = Deno.env.get("TWITTER_CLIENT_ID");
+  const clientSecret = Deno.env.get("TWITTER_CLIENT_SECRET");
+  
+  if (!clientId || !clientSecret) {
+    console.error("Twitter credentials (CLIENT_ID or CLIENT_SECRET) not configured.");
+    return null;
+  }
+  
+  const basicAuth = btoa(`${clientId}:${clientSecret}`);
+  const bodyParams = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken
+  });
+  
+  try {
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": `Basic ${basicAuth}`
+      },
+      body: bodyParams
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Twitter token refresh failed:", errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    console.log("Twitter token refreshed successfully.");
+    
+    // Update the database with the new access token and (if provided) new refresh token
+    const updatePayload: any = {
+      oauth_user_token: data.access_token,
+      token_expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString()
+    };
+    
+    if (data.refresh_token) {
+      updatePayload.oauth_refresh_token = data.refresh_token;
+    }
+    
+    const { error: updateError } = await supabaseClient
+      .from("social_connections")
+      .update(updatePayload)
+      .eq("id", socialConnectionId);
+    
+    if (updateError) {
+      console.error(`Failed to update DB with new Twitter token for connection ${socialConnectionId}:`, updateError);
+    } else {
+      console.log(`DB updated with new Twitter token for connection ${socialConnectionId}`);
+    }
+    
+    return data.access_token;
+  } catch (error) {
+    console.error(`Error during Twitter token refresh for connection ${socialConnectionId}:`, error);
+    return null;
   }
 }
 
@@ -572,12 +637,43 @@ async function testTwitterAPI(
   feature: string, 
   connection: any, 
   page: any, 
-  options: { content?: string, post_id?: string }
+  options: { content?: string, post_id?: string },
+  supabaseClient: any
 ) {
   const baseUrl = 'https://api.twitter.com/2'
-  const token = connection.oauth_user_token
+  let token = connection.oauth_user_token
 
   console.log(`🔍 [Twitter API Debug] Testing ${feature} with token: ${token ? 'present' : 'missing'}`)
+
+  // Check if token needs refresh (if expires_at is set and token is expired)
+  if (connection.token_expires_at) {
+    const expiresAt = new Date(connection.token_expires_at)
+    const now = new Date()
+    const bufferTime = 5 * 60 * 1000 // 5 minutes buffer
+    
+    if (expiresAt.getTime() - now.getTime() < bufferTime) {
+      console.log('🔄 [Twitter API Debug] Token is expired or expiring soon, attempting refresh...')
+      
+      if (connection.oauth_refresh_token) {
+        const refreshedToken = await refreshTwitterToken(
+          connection.oauth_refresh_token, 
+          supabaseClient, 
+          connection.id
+        )
+        
+        if (refreshedToken) {
+          token = refreshedToken
+          console.log('✅ [Twitter API Debug] Token refreshed successfully')
+        } else {
+          console.error('❌ [Twitter API Debug] Token refresh failed')
+          throw new Error('Twitter token expired and refresh failed')
+        }
+      } else {
+        console.error('❌ [Twitter API Debug] No refresh token available')
+        throw new Error('Twitter token expired and no refresh token available')
+      }
+    }
+  }
 
   switch (feature) {
     case 'list_tweets': {

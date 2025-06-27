@@ -107,18 +107,6 @@ export function Users() {
     setActionSheetOpen(true)
   }
 
-  const getTierIcon = (tier: string) => {
-    switch (tier) {
-      case 'enterprise':
-        return Crown
-      case 'pro':
-      case 'team':
-        return Star
-      default:
-        return UsersIcon
-    }
-  }
-
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'enterprise':

@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Table } from '../components/ui/Table'
 import { Button } from '../components/ui/Button'
 import { Trash2, RefreshCw } from 'lucide-react'

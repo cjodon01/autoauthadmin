@@ -17,7 +17,9 @@ import {
   Linkedin,
   Twitter,
   MessageSquare,
-  Settings
+  Settings,
+  Globe,
+  User
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
@@ -31,6 +33,7 @@ interface APITestLog {
   feature: string
   endpoint: string
   account_name: string
+  page_name?: string
   status: 'success' | 'error' | 'pending'
   response_summary: string
   full_response?: any
@@ -39,35 +42,42 @@ interface APITestLog {
 
 const PLATFORM_FEATURES = {
   facebook: [
-    { value: 'list_pages', label: 'List User Pages' },
-    { value: 'list_posts', label: 'List Recent Posts' },
-    { value: 'post_to_page', label: 'Post to Page' },
-    { value: 'get_engagements', label: 'Get Post Engagements' },
-    { value: 'get_insights', label: 'Get Post Insights' },
+    { value: 'list_pages', label: 'List User Pages', requiresPage: false, scope: 'account' },
+    { value: 'list_posts', label: 'List User Posts', requiresPage: false, scope: 'account' },
+    { value: 'list_page_posts', label: 'List Page Posts', requiresPage: true, scope: 'page' },
+    { value: 'post_to_feed', label: 'Post to User Feed', requiresPage: false, scope: 'account' },
+    { value: 'post_to_page', label: 'Post to Page', requiresPage: true, scope: 'page' },
+    { value: 'get_engagements', label: 'Get User Post Engagements', requiresPage: false, scope: 'account' },
+    { value: 'get_page_engagements', label: 'Get Page Post Engagements', requiresPage: true, scope: 'page' },
+    { value: 'get_insights', label: 'Get User Post Insights', requiresPage: false, scope: 'account' },
+    { value: 'get_page_insights', label: 'Get Page Insights', requiresPage: true, scope: 'page' },
   ],
   instagram: [
-    { value: 'list_pages', label: 'List User Pages' },
-    { value: 'list_posts', label: 'List Recent Posts' },
-    { value: 'post_to_page', label: 'Post to Page' },
-    { value: 'get_engagements', label: 'Get Post Engagements' },
-    { value: 'get_insights', label: 'Get Post Insights' },
+    { value: 'list_pages', label: 'List User Pages', requiresPage: false, scope: 'account' },
+    { value: 'list_posts', label: 'List User Posts', requiresPage: false, scope: 'account' },
+    { value: 'list_page_posts', label: 'List Page Posts', requiresPage: true, scope: 'page' },
+    { value: 'post_to_page', label: 'Post to Page', requiresPage: true, scope: 'page' },
+    { value: 'get_engagements', label: 'Get User Post Engagements', requiresPage: false, scope: 'account' },
+    { value: 'get_page_engagements', label: 'Get Page Post Engagements', requiresPage: true, scope: 'page' },
+    { value: 'get_insights', label: 'Get User Post Insights', requiresPage: false, scope: 'account' },
+    { value: 'get_page_insights', label: 'Get Page Insights', requiresPage: true, scope: 'page' },
   ],
   linkedin: [
-    { value: 'list_organizations', label: 'List Organizations' },
-    { value: 'list_posts', label: 'List Recent Posts' },
-    { value: 'post_to_organization', label: 'Post to Organization' },
-    { value: 'get_engagements', label: 'Get Post Engagements' },
+    { value: 'list_organizations', label: 'List Organizations', requiresPage: false, scope: 'account' },
+    { value: 'list_posts', label: 'List User Posts', requiresPage: false, scope: 'account' },
+    { value: 'post_to_organization', label: 'Post to Organization', requiresPage: true, scope: 'page' },
+    { value: 'get_engagements', label: 'Get Post Engagements', requiresPage: false, scope: 'account' },
   ],
   twitter: [
-    { value: 'list_tweets', label: 'List Recent Tweets' },
-    { value: 'post_tweet', label: 'Post a Tweet' },
-    { value: 'get_engagements', label: 'Get Tweet Engagements' },
+    { value: 'list_tweets', label: 'List Recent Tweets', requiresPage: false, scope: 'account' },
+    { value: 'post_tweet', label: 'Post a Tweet', requiresPage: false, scope: 'account' },
+    { value: 'get_engagements', label: 'Get Tweet Engagements', requiresPage: false, scope: 'account' },
   ],
   reddit: [
-    { value: 'list_subreddits', label: 'List User Subreddits' },
-    { value: 'list_posts', label: 'List Recent Posts' },
-    { value: 'post_to_subreddit', label: 'Post to Subreddit' },
-    { value: 'get_engagements', label: 'Get Post Engagements' },
+    { value: 'list_subreddits', label: 'List User Subreddits', requiresPage: false, scope: 'account' },
+    { value: 'list_posts', label: 'List Recent Posts', requiresPage: false, scope: 'account' },
+    { value: 'post_to_subreddit', label: 'Post to Subreddit', requiresPage: true, scope: 'page' },
+    { value: 'get_engagements', label: 'Get Post Engagements', requiresPage: false, scope: 'account' },
   ],
 }
 
@@ -96,6 +106,13 @@ export function APITester() {
       return
     }
 
+    // Check if feature requires a page
+    const featureConfig = PLATFORM_FEATURES[selectedPlatform as keyof typeof PLATFORM_FEATURES]?.find(f => f.value === selectedFeature)
+    if (featureConfig?.requiresPage && !selectedPage) {
+      toast.error('This feature requires selecting a page')
+      return
+    }
+
     setTesting(true)
 
     const connection = connections.find(c => c.id === selectedConnection)
@@ -105,6 +122,8 @@ export function APITester() {
       return
     }
 
+    const page = selectedPage ? pages.find(p => p.id === selectedPage) : null
+
     const testLog: APITestLog = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
@@ -112,6 +131,7 @@ export function APITester() {
       feature: selectedFeature,
       endpoint: '',
       account_name: connection.account_name || connection.profiles?.brand_name || 'Unknown',
+      page_name: page?.page_name,
       status: 'pending',
       response_summary: 'Testing...',
     }
@@ -200,6 +220,10 @@ export function APITester() {
     }
   }
 
+  const getScopeIcon = (scope: string) => {
+    return scope === 'page' ? <Globe className="h-3 w-3" /> : <User className="h-3 w-3" />
+  }
+
   const filteredConnections = connections.filter(c => 
     !selectedPlatform || c.provider === selectedPlatform
   )
@@ -235,15 +259,24 @@ export function APITester() {
 
   const featureOptions = [
     { value: '', label: 'Select Feature' },
-    ...(selectedPlatform ? PLATFORM_FEATURES[selectedPlatform as keyof typeof PLATFORM_FEATURES] || [] : [])
+    ...(selectedPlatform ? PLATFORM_FEATURES[selectedPlatform as keyof typeof PLATFORM_FEATURES] || [] : []).map(f => ({
+      value: f.value,
+      label: f.label,
+      scope: f.scope
+    }))
   ]
+
+  const selectedFeatureConfig = selectedPlatform && selectedFeature 
+    ? PLATFORM_FEATURES[selectedPlatform as keyof typeof PLATFORM_FEATURES]?.find(f => f.value === selectedFeature)
+    : null
 
   const needsContent = selectedFeature && (
     selectedFeature.includes('post') || 
     selectedFeature === 'post_to_page' || 
     selectedFeature === 'post_to_organization' ||
     selectedFeature === 'post_tweet' ||
-    selectedFeature === 'post_to_subreddit'
+    selectedFeature === 'post_to_subreddit' ||
+    selectedFeature === 'post_to_feed'
   )
 
   const needsPostId = selectedFeature && (
@@ -274,17 +307,39 @@ export function APITester() {
     {
       key: 'feature',
       label: 'Feature',
-      render: (log: APITestLog) => (
-        <span className="text-sm font-medium">
-          {log.feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-        </span>
-      )
+      render: (log: APITestLog) => {
+        const featureConfig = PLATFORM_FEATURES[log.platform as keyof typeof PLATFORM_FEATURES]?.find(f => f.value === log.feature)
+        return (
+          <div className="flex items-center space-x-2">
+            <span className="text-sm font-medium">
+              {log.feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </span>
+            {featureConfig && (
+              <div className="flex items-center space-x-1 text-xs text-gray-500">
+                {getScopeIcon(featureConfig.scope)}
+                <span>{featureConfig.scope}</span>
+              </div>
+            )}
+          </div>
+        )
+      }
     },
     {
-      key: 'account',
-      label: 'Account',
+      key: 'target',
+      label: 'Target',
       render: (log: APITestLog) => (
-        <span className="text-sm">{log.account_name}</span>
+        <div className="text-sm">
+          <div className="flex items-center space-x-1">
+            <User className="h-3 w-3 text-gray-400" />
+            <span>{log.account_name}</span>
+          </div>
+          {log.page_name && (
+            <div className="flex items-center space-x-1 text-xs text-gray-500 mt-1">
+              <Globe className="h-3 w-3" />
+              <span>{log.page_name}</span>
+            </div>
+          )}
+        </div>
       )
     },
     {
@@ -333,7 +388,7 @@ export function APITester() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">API Tester</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Test social media API endpoints and monitor responses
+            Test social media API endpoints for both accounts and pages
           </p>
         </div>
         <Button onClick={() => { refreshConnections(); refreshPages(); }} variant="secondary">
@@ -376,22 +431,56 @@ export function APITester() {
             />
 
             {filteredPages.length > 0 && (
-              <Select
-                label="Page/Organization"
-                value={selectedPage}
-                onChange={(e) => setSelectedPage(e.target.value)}
-                options={pageOptions}
-                disabled={loading}
-              />
+              <div>
+                <Select
+                  label="Page/Organization"
+                  value={selectedPage}
+                  onChange={(e) => setSelectedPage(e.target.value)}
+                  options={pageOptions}
+                  disabled={loading}
+                />
+                {selectedFeatureConfig?.requiresPage && !selectedPage && (
+                  <p className="text-sm text-amber-600 mt-1">
+                    ⚠️ This feature requires selecting a page
+                  </p>
+                )}
+              </div>
             )}
 
-            <Select
-              label="API Feature"
-              value={selectedFeature}
-              onChange={(e) => setSelectedFeature(e.target.value)}
-              options={featureOptions}
-              disabled={!selectedConnection || loading}
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                API Feature
+              </label>
+              <select
+                value={selectedFeature}
+                onChange={(e) => setSelectedFeature(e.target.value)}
+                disabled={!selectedConnection || loading}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+              >
+                <option value="">Select Feature</option>
+                {featureOptions.slice(1).map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.scope === 'page' ? '📄' : '👤'} {option.label}
+                  </option>
+                ))}
+              </select>
+              {selectedFeatureConfig && (
+                <div className="mt-1 flex items-center space-x-2 text-xs text-gray-500">
+                  {getScopeIcon(selectedFeatureConfig.scope)}
+                  <span>
+                    {selectedFeatureConfig.scope === 'page' ? 'Page-level operation' : 'Account-level operation'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {selectedFeatureConfig?.requiresPage && filteredPages.length === 0 && selectedConnection && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <p className="text-sm text-yellow-800">
+                  This feature requires a page, but no pages are available for the selected connection.
+                </p>
+              </div>
+            )}
 
             {needsContent && (
               <Textarea
@@ -415,7 +504,13 @@ export function APITester() {
             <Button
               onClick={runAPITest}
               loading={testing}
-              disabled={!selectedPlatform || !selectedConnection || !selectedFeature || loading}
+              disabled={
+                !selectedPlatform || 
+                !selectedConnection || 
+                !selectedFeature || 
+                loading ||
+                (selectedFeatureConfig?.requiresPage && !selectedPage)
+              }
               className="w-full"
             >
               <Play className="h-4 w-4 mr-2" />
@@ -456,7 +551,12 @@ export function APITester() {
                 <div key={log.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <div className="flex items-center space-x-2">
                     {getPlatformIcon(log.platform)}
-                    <span className="text-sm">{log.feature.replace(/_/g, ' ')}</span>
+                    <div>
+                      <span className="text-sm">{log.feature.replace(/_/g, ' ')}</span>
+                      {log.page_name && (
+                        <div className="text-xs text-gray-500">→ {log.page_name}</div>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(log.status)}
@@ -541,9 +641,20 @@ export function APITester() {
                 </div>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-2">Account Information</h4>
+                <h4 className="text-sm font-medium text-gray-900 mb-2">Target Information</h4>
                 <div className="bg-gray-50 rounded-md p-3">
-                  <div className="text-sm">{selectedLog.account_name}</div>
+                  <div className="text-sm">
+                    <div className="flex items-center space-x-1 font-medium">
+                      <User className="h-3 w-3 text-gray-400" />
+                      <span>{selectedLog.account_name}</span>
+                    </div>
+                    {selectedLog.page_name && (
+                      <div className="flex items-center space-x-1 text-gray-600 mt-1">
+                        <Globe className="h-3 w-3" />
+                        <span>Page: {selectedLog.page_name}</span>
+                      </div>
+                    )}
+                  </div>
                   {selectedLog.endpoint && (
                     <div className="text-xs text-gray-500 mt-1 font-mono break-all">
                       {selectedLog.endpoint}

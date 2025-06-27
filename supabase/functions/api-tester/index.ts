@@ -228,12 +228,15 @@ async function testFacebookAPI(
   options: { content?: string, post_id?: string }
 ) {
   const baseUrl = 'https://graph.facebook.com/v18.0'
-  const token = page?.page_access_token || connection.oauth_user_token
-
-  console.log(`🔍 [Facebook API Debug] Testing ${feature} with token: ${token ? 'present' : 'missing'}`)
+  
+  console.log(`🔍 [Facebook API Debug] Testing ${feature}`)
+  console.log(`🔍 [Facebook API Debug] Page available: ${!!page}`)
+  console.log(`🔍 [Facebook API Debug] Connection token: ${connection.oauth_user_token ? 'present' : 'missing'}`)
+  console.log(`🔍 [Facebook API Debug] Page token: ${page?.page_access_token ? 'present' : 'missing'}`)
 
   switch (feature) {
     case 'list_pages': {
+      const token = connection.oauth_user_token
       const endpoint = `${baseUrl}/me/accounts`
       console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
       
@@ -252,8 +255,8 @@ async function testFacebookAPI(
     }
 
     case 'list_posts': {
-      const pageId = page?.page_id || 'me'
-      const endpoint = `${baseUrl}/${pageId}/posts`
+      const token = connection.oauth_user_token
+      const endpoint = `${baseUrl}/me/posts`
       console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
       
       const response = await fetch(`${endpoint}?access_token=${token}&limit=10`)
@@ -270,13 +273,36 @@ async function testFacebookAPI(
       }
     }
 
-    case 'post_to_page': {
-      if (!options.content) {
-        throw new Error('Content is required for posting')
+    case 'list_page_posts': {
+      if (!page) {
+        throw new Error('Page is required for listing page posts')
       }
       
-      const pageId = page?.page_id || 'me'
-      const endpoint = `${baseUrl}/${pageId}/feed`
+      const token = page.page_access_token
+      const endpoint = `${baseUrl}/${page.page_id}/posts`
+      console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
+      
+      const response = await fetch(`${endpoint}?access_token=${token}&limit=10`)
+      const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'GET',
+        status_code: response.status,
+        summary: `Found ${data.data?.length || 0} page posts`,
+        response: data,
+      }
+    }
+
+    case 'post_to_feed': {
+      if (!options.content) {
+        throw new Error('Content is required for posting to feed')
+      }
+      
+      const token = connection.oauth_user_token
+      const endpoint = `${baseUrl}/me/feed`
       console.log(`📤 [Facebook API Debug] POST ${endpoint}`)
       
       const response = await fetch(endpoint, {
@@ -301,11 +327,47 @@ async function testFacebookAPI(
       }
     }
 
+    case 'post_to_page': {
+      if (!options.content) {
+        throw new Error('Content is required for posting to page')
+      }
+      
+      if (!page) {
+        throw new Error('Page is required for posting to page')
+      }
+      
+      const token = page.page_access_token
+      const endpoint = `${baseUrl}/${page.page_id}/feed`
+      console.log(`📤 [Facebook API Debug] POST ${endpoint}`)
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: options.content,
+          access_token: token,
+        }),
+      })
+      const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'POST',
+        status_code: response.status,
+        request_body: { message: options.content },
+        summary: response.ok ? `Page post created: ${data.id}` : 'Page post failed',
+        response: data,
+      }
+    }
+
     case 'get_engagements': {
       if (!options.post_id) {
         throw new Error('Post ID is required for engagement data')
       }
       
+      const token = connection.oauth_user_token
       const endpoint = `${baseUrl}/${options.post_id}`
       console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
       
@@ -323,11 +385,39 @@ async function testFacebookAPI(
       }
     }
 
+    case 'get_page_engagements': {
+      if (!options.post_id) {
+        throw new Error('Post ID is required for page engagement data')
+      }
+      
+      if (!page) {
+        throw new Error('Page is required for page engagement data')
+      }
+      
+      const token = page.page_access_token
+      const endpoint = `${baseUrl}/${options.post_id}`
+      console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
+      
+      const response = await fetch(`${endpoint}?fields=likes.summary(true),comments.summary(true),shares&access_token=${token}`)
+      const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'GET',
+        status_code: response.status,
+        summary: `Page Post - Likes: ${data.likes?.summary?.total_count || 0}, Comments: ${data.comments?.summary?.total_count || 0}`,
+        response: data,
+      }
+    }
+
     case 'get_insights': {
       if (!options.post_id) {
         throw new Error('Post ID is required for insights')
       }
       
+      const token = connection.oauth_user_token
       const endpoint = `${baseUrl}/${options.post_id}/insights`
       console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
       
@@ -341,6 +431,29 @@ async function testFacebookAPI(
         method: 'GET',
         status_code: response.status,
         summary: `Retrieved ${data.data?.length || 0} insight metrics`,
+        response: data,
+      }
+    }
+
+    case 'get_page_insights': {
+      if (!page) {
+        throw new Error('Page is required for page insights')
+      }
+      
+      const token = page.page_access_token
+      const endpoint = `${baseUrl}/${page.page_id}/insights`
+      console.log(`📤 [Facebook API Debug] GET ${endpoint}`)
+      
+      const response = await fetch(`${endpoint}?metric=page_impressions,page_reach&access_token=${token}`)
+      const data = await response.json()
+      
+      console.log(`📥 [Facebook API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'GET',
+        status_code: response.status,
+        summary: `Retrieved ${data.data?.length || 0} page insight metrics`,
         response: data,
       }
     }
@@ -398,6 +511,47 @@ async function testLinkedInAPI(
         method: 'GET',
         status_code: response.status,
         summary: `Found ${data.elements?.length || 0} recent posts`,
+        response: data,
+      }
+    }
+
+    case 'post_to_organization': {
+      if (!options.content) {
+        throw new Error('Content is required for posting to organization')
+      }
+      
+      if (!page) {
+        throw new Error('Organization page is required for posting')
+      }
+      
+      const endpoint = `${baseUrl}/shares`
+      console.log(`📤 [LinkedIn API Debug] POST ${endpoint}`)
+      
+      const postData = {
+        owner: `urn:li:organization:${page.page_id}`,
+        text: {
+          text: options.content
+        }
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(postData)
+      })
+      const data = await response.json()
+      
+      console.log(`📥 [LinkedIn API Debug] Response: ${response.status}`, data)
+      
+      return {
+        endpoint,
+        method: 'POST',
+        status_code: response.status,
+        request_body: postData,
+        summary: response.ok ? `Organization post created` : 'Organization post failed',
         response: data,
       }
     }

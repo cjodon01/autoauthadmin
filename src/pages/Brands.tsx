@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react'
-import { supabase, type Brand } from '../lib/supabase'
+import { useState } from 'react'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Input } from '../components/ui/Input'
 import { Textarea } from '../components/ui/Textarea'
-import { Edit, Trash2, Plus } from 'lucide-react'
+import { Edit, Trash2, Plus, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useBrands } from '../hooks/useDataLoader'
+import { supabase } from '../lib/supabase'
 
 export function Brands() {
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: brands, loading, refresh: refreshBrands } = useBrands()
   const [modalOpen, setModalOpen] = useState(false)
-  const [editingBrand, setEditingBrand] = useState<Brand | null>(null)
+  const [editingBrand, setEditingBrand] = useState<any>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,23 +26,7 @@ export function Brands() {
     secondary_color: '',
   })
 
-  useEffect(() => {
-    loadBrands()
-  }, [])
-
-  const loadBrands = async () => {
-    setLoading(true)
-    const { data, error } = await supabase.from('brands').select('*').order('created_at', { ascending: false })
-    if (error) {
-      toast.error('Failed to load brands')
-      console.error(error)
-    } else {
-      setBrands(data || [])
-    }
-    setLoading(false)
-  }
-
-  const handleEdit = (brand: Brand) => {
+  const handleEdit = (brand: any) => {
     setEditingBrand(brand)
     setFormData({
       name: brand.name,
@@ -59,14 +43,14 @@ export function Brands() {
     setModalOpen(true)
   }
 
-  const handleDelete = async (brand: Brand) => {
+  const handleDelete = async (brand: any) => {
     if (!confirm('Are you sure you want to delete this brand?')) return
     const { error } = await supabase.from('brands').delete().eq('id', brand.id)
     if (error) {
       toast.error('Delete failed')
     } else {
       toast.success('Brand deleted')
-      loadBrands()
+      refreshBrands()
     }
   }
 
@@ -84,7 +68,7 @@ export function Brands() {
       toast.success(editingBrand ? 'Brand updated' : 'Brand added')
       setModalOpen(false)
       setEditingBrand(null)
-      loadBrands()
+      refreshBrands()
     }
   }
 
@@ -93,29 +77,40 @@ export function Brands() {
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Brands</h1>
-        <Button
-          onClick={() => {
-            setEditingBrand(null)
-            setFormData({
-              name: '',
-              description: '',
-              mission_statement: '',
-              usp_statement: '',
-              brand_persona_description: '',
-              target_audience: '',
-              brand_voice: '',
-              industry: '',
-              primary_color: '',
-              secondary_color: '',
-            })
-            setModalOpen(true)
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" /> Add Brand
-        </Button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Brands</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage brand profiles and configurations
+          </p>
+        </div>
+        <div className="flex space-x-3">
+          <Button onClick={refreshBrands} variant="secondary">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button
+            onClick={() => {
+              setEditingBrand(null)
+              setFormData({
+                name: '',
+                description: '',
+                mission_statement: '',
+                usp_statement: '',
+                brand_persona_description: '',
+                target_audience: '',
+                brand_voice: '',
+                industry: '',
+                primary_color: '',
+                secondary_color: '',
+              })
+              setModalOpen(true)
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" /> Add Brand
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

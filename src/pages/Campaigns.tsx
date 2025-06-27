@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-//import { supabase, type Campaign } from '../lib/supabase'
 import { Table } from '../components/ui/Table'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -9,15 +8,16 @@ import { Textarea } from '../components/ui/Textarea'
 import { Edit, Trash2, RefreshCw, Play, Pause, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { useCampaigns, useProfiles, useBrands, useSocialPages, useAIModels } from '../hooks/useDataLoader'
 import { supabase } from '../lib/supabase'
 
 export function Campaigns() {
-  const [campaigns, setCampaigns] = useState<any[]>([])
-  const [profiles, setProfiles] = useState<any[]>([])
-  const [brands, setBrands] = useState<any[]>([])
-  const [socialPages, setSocialPages] = useState<any[]>([])
-  const [aiModels, setAiModels] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: campaigns, loading: campaignsLoading, refresh: refreshCampaigns } = useCampaigns()
+  const { data: profiles } = useProfiles()
+  const { data: brands } = useBrands()
+  const { data: socialPages } = useSocialPages()
+  const { data: aiModels } = useAIModels()
+  
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<any>(null)
   const [formData, setFormData] = useState({
@@ -47,43 +47,7 @@ export function Campaigns() {
     ai_model_for_journey_map: '',
   })
 
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      const [campaignsResult, profilesResult, brandsResult, pagesResult, modelsResult] = await Promise.all([
-        supabase.from('campaigns').select(`
-          *,
-          profiles!campaigns_user_id_fkey(brand_name, email),
-          brands(name),
-          social_pages(page_name, provider)
-        `).order('created_at', { ascending: false }),
-        supabase.from('profiles').select('user_id, brand_name, email'),
-        supabase.from('brands').select('id, name, user_id'),
-        supabase.from('social_pages').select('id, page_name, provider, user_id'),
-        supabase.from('ai_models').select('id, model_name, model_type')
-      ])
-
-      if (campaignsResult.error) throw campaignsResult.error
-      if (profilesResult.error) throw profilesResult.error
-      if (brandsResult.error) throw brandsResult.error
-      if (pagesResult.error) throw pagesResult.error
-      if (modelsResult.error) throw modelsResult.error
-
-      setCampaigns(campaignsResult.data || [])
-      setProfiles(profilesResult.data || [])
-      setBrands(brandsResult.data || [])
-      setSocialPages(pagesResult.data || [])
-      setAiModels(modelsResult.data || [])
-    } catch (error: any) {
-      toast.error('Failed to load campaigns')
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const loading = campaignsLoading
 
   const handleEdit = (campaign: any) => {
     setEditingCampaign(campaign)
@@ -158,7 +122,7 @@ export function Campaigns() {
 
       if (error) throw error
       toast.success('Campaign deleted successfully')
-      loadData()
+      refreshCampaigns()
     } catch (error: any) {
       toast.error('Failed to delete campaign')
       console.error(error)
@@ -174,7 +138,7 @@ export function Campaigns() {
 
       if (error) throw error
       toast.success(`Campaign ${campaign.is_active ? 'paused' : 'activated'} successfully`)
-      loadData()
+      refreshCampaigns()
     } catch (error: any) {
       toast.error('Failed to update campaign status')
       console.error(error)
@@ -209,7 +173,7 @@ export function Campaigns() {
 
       setModalOpen(false)
       setEditingCampaign(null)
-      loadData()
+      refreshCampaigns()
     } catch (error: any) {
       toast.error('Failed to save campaign')
       console.error(error)
@@ -363,7 +327,7 @@ export function Campaigns() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button onClick={loadData} variant="secondary">
+          <Button onClick={refreshCampaigns} variant="secondary">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>

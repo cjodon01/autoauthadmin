@@ -1,40 +1,16 @@
-import { useEffect, useState } from 'react'
-import { supabase, type SocialConnection } from '../lib/supabase'
+import { useState } from 'react'
 import { Table } from '../components/ui/Table'
 import { Button } from '../components/ui/Button'
 import { Trash2, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { useSocialConnections } from '../hooks/useDataLoader'
+import { supabase } from '../lib/supabase'
 
 export function SocialConnections() {
-  const [connections, setConnections] = useState<SocialConnection[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: connections, loading, refresh: refreshConnections } = useSocialConnections()
 
-  useEffect(() => {
-    loadConnections()
-  }, [])
-
-  const loadConnections = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('social_connections')
-        .select(`
-          *,
-          profiles!social_connections_user_id_fkey(brand_name, email)
-        `)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setConnections(data || [])
-    } catch (error: any) {
-      toast.error('Failed to load social connections')
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDelete = async (connection: SocialConnection) => {
+  const handleDelete = async (connection: any) => {
     if (!confirm('Are you sure you want to delete this connection?')) return
 
     try {
@@ -45,7 +21,7 @@ export function SocialConnections() {
 
       if (error) throw error
       toast.success('Connection deleted successfully')
-      loadConnections()
+      refreshConnections()
     } catch (error: any) {
       toast.error('Failed to delete connection')
       console.error(error)
@@ -66,7 +42,7 @@ export function SocialConnections() {
     {
       key: 'provider',
       label: 'Provider',
-      render: (connection: SocialConnection) => (
+      render: (connection: any) => (
         <div className="flex items-center space-x-2">
           <span className="text-lg">{getProviderIcon(connection.provider)}</span>
           <span className="capitalize">{connection.provider}</span>
@@ -86,12 +62,12 @@ export function SocialConnections() {
     {
       key: 'account_id',
       label: 'Account ID',
-      render: (connection: SocialConnection) => connection.account_id || '-',
+      render: (connection: any) => connection.account_id || '-',
     },
     {
       key: 'token_expires_at',
       label: 'Token Expires',
-      render: (connection: SocialConnection) => 
+      render: (connection: any) => 
         connection.token_expires_at 
           ? format(new Date(connection.token_expires_at), 'MMM d, yyyy HH:mm')
           : 'Never',
@@ -99,12 +75,12 @@ export function SocialConnections() {
     {
       key: 'created_at',
       label: 'Connected',
-      render: (connection: SocialConnection) => format(new Date(connection.created_at), 'MMM d, yyyy'),
+      render: (connection: any) => format(new Date(connection.created_at), 'MMM d, yyyy'),
     },
     {
       key: 'actions',
       label: 'Actions',
-      render: (connection: SocialConnection) => (
+      render: (connection: any) => (
         <div className="flex space-x-2">
           <Button
             size="sm"
@@ -127,7 +103,7 @@ export function SocialConnections() {
             Manage OAuth connections to social media platforms
           </p>
         </div>
-        <Button onClick={loadConnections} variant="secondary">
+        <Button onClick={refreshConnections} variant="secondary">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase, cachedQuery, debounce } from '../lib/supabase'
 
 interface UseDataLoaderOptions {
@@ -23,9 +23,10 @@ export function useDataLoader<T>(
   const [data, setData] = useState<T[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const mountedRef = useRef(true)
 
   const loadData = useCallback(async () => {
-    if (!enabled) return
+    if (!enabled || !mountedRef.current) return
 
     try {
       setLoading(true)
@@ -37,14 +38,20 @@ export function useDataLoader<T>(
         throw result.error
       }
 
-      setData(result.data || [])
+      if (mountedRef.current) {
+        setData(result.data || [])
+      }
     } catch (err: any) {
       console.error(`Error loading ${table}:`, err)
-      setError(err.message || 'Failed to load data')
+      if (mountedRef.current) {
+        setError(err.message || 'Failed to load data')
+      }
     } finally {
-      setLoading(false)
+      if (mountedRef.current) {
+        setLoading(false)
+      }
     }
-  }, [table, queryBuilder, cacheKey, enabled])
+  }, [table, cacheKey, enabled])
 
   // Debounced version of loadData
   const debouncedLoadData = useCallback(
@@ -53,13 +60,18 @@ export function useDataLoader<T>(
   )
 
   useEffect(() => {
+    mountedRef.current = true
     if (enabled) {
       debouncedLoadData()
     }
-  }, [debouncedLoadData, enabled, ...dependencies])
+    
+    return () => {
+      mountedRef.current = false
+    }
+  }, [enabled, ...dependencies])
 
   const refresh = useCallback(() => {
-    if (enabled) {
+    if (enabled && mountedRef.current) {
       loadData()
     }
   }, [loadData, enabled])

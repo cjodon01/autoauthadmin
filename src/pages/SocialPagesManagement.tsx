@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react'
-//import { supabase, type SocialPage } from '../lib/supabase'
+import React, { useState } from 'react'
 import { Table } from '../components/ui/Table'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
@@ -9,25 +8,14 @@ import { Textarea } from '../components/ui/Textarea'
 import { Edit, Trash2, RefreshCw, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { format } from 'date-fns'
+import { useSocialPages, useSocialConnections, useProfiles } from '../hooks/useDataLoader'
 import { supabase } from '../lib/supabase'
 
-interface SocialConnection {
-  id: string
-  user_id: string
-  provider: string
-}
-
-interface Profile {
-  user_id: string
-  brand_name: string
-  email: string
-}
-
 export function SocialPagesManagement() {
-  const [pages, setPages] = useState<any[]>([])
-  const [connections, setConnections] = useState<SocialConnection[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: pages, loading, refresh: refreshPages } = useSocialPages()
+  const { data: connections } = useSocialConnections()
+  const { data: profiles } = useProfiles()
+  
   const [modalOpen, setModalOpen] = useState(false)
   const [editingPage, setEditingPage] = useState<any>(null)
   const [formData, setFormData] = useState({
@@ -42,37 +30,6 @@ export function SocialPagesManagement() {
     preferred_audience: '',
     provider: '',
   })
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      const [pagesResult, connectionsResult, profilesResult] = await Promise.all([
-        supabase.from('social_pages').select(`
-          *,
-          social_connections!social_pages_connection_id_fkey(provider),
-          profiles!social_pages_user_id_fkey(brand_name, email)
-        `).order('created_at', { ascending: false }),
-        supabase.from('social_connections').select('id, user_id, provider'),
-        supabase.from('profiles').select('user_id, brand_name, email')
-      ])
-
-      if (pagesResult.error) throw pagesResult.error
-      if (connectionsResult.error) throw connectionsResult.error
-      if (profilesResult.error) throw profilesResult.error
-
-      setPages(pagesResult.data || [])
-      setConnections(connectionsResult.data || [])
-      setProfiles(profilesResult.data || [])
-    } catch (error: any) {
-      toast.error('Failed to load social pages')
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleEdit = (page: any) => {
     setEditingPage(page)
@@ -119,7 +76,7 @@ export function SocialPagesManagement() {
 
       if (error) throw error
       toast.success('Social page deleted successfully')
-      loadData()
+      refreshPages()
     } catch (error: any) {
       toast.error('Failed to delete social page')
       console.error(error)
@@ -149,7 +106,7 @@ export function SocialPagesManagement() {
 
       setModalOpen(false)
       setEditingPage(null)
-      loadData()
+      refreshPages()
     } catch (error: any) {
       toast.error('Failed to save social page')
       console.error(error)
@@ -249,7 +206,7 @@ export function SocialPagesManagement() {
           </p>
         </div>
         <div className="flex space-x-3">
-          <Button onClick={loadData} variant="secondary">
+          <Button onClick={refreshPages} variant="secondary">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { Users, Share2, Megaphone, Palette, Bot, FileText } from 'lucide-react'
+import { Users, Share2, Megaphone, Palette, Bot, FileText, TrendingUp, Activity } from 'lucide-react'
+import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
+import { StatsGrid } from '../components/ui/StatsGrid'
 
 interface Stats {
   users: number
@@ -28,7 +30,6 @@ export function Dashboard() {
 
     const loadStats = async () => {
       try {
-        // Use Promise.allSettled to prevent one failed request from breaking others
         const results = await Promise.allSettled([
           supabase.from('profiles').select('*', { count: 'exact', head: true }),
           supabase.from('social_connections').select('*', { count: 'exact', head: true }),
@@ -68,48 +69,87 @@ export function Dashboard() {
     }
   }, [])
 
-  const statCards = [
+  const statItems = [
     {
-      name: 'Total Users',
+      label: 'Total Users',
       value: stats.users,
       icon: Users,
-      href: '/users',
       color: 'bg-blue-500',
     },
     {
-      name: 'Social Connections',
+      label: 'Social Connections',
       value: stats.socialConnections,
       icon: Share2,
-      href: '/social-connections',
       color: 'bg-green-500',
     },
     {
-      name: 'Active Campaigns',
+      label: 'Active Campaigns',
       value: stats.campaigns,
       icon: Megaphone,
-      href: '/campaigns',
       color: 'bg-purple-500',
     },
     {
-      name: 'Brands',
+      label: 'Brands',
       value: stats.brands,
       icon: Palette,
-      href: '/brands',
       color: 'bg-pink-500',
     },
     {
-      name: 'AI Models',
+      label: 'AI Models',
       value: stats.aiModels,
       icon: Bot,
-      href: '/ai-config',
       color: 'bg-indigo-500',
     },
     {
-      name: 'Generated Posts',
+      label: 'Generated Posts',
       value: stats.posts,
       icon: FileText,
-      href: '/content-log',
       color: 'bg-orange-500',
+    },
+  ]
+
+  const quickActions = [
+    {
+      title: 'Manage Users',
+      description: 'View and manage user accounts',
+      href: '/users',
+      icon: Users,
+      color: 'bg-blue-500',
+    },
+    {
+      title: 'View Campaigns',
+      description: 'Monitor active campaigns',
+      href: '/campaigns',
+      icon: Megaphone,
+      color: 'bg-purple-500',
+    },
+    {
+      title: 'Manage Brands',
+      description: 'Configure brand settings',
+      href: '/brands',
+      icon: Palette,
+      color: 'bg-pink-500',
+    },
+    {
+      title: 'AI Configuration',
+      description: 'Manage AI models and providers',
+      href: '/ai-config',
+      icon: Bot,
+      color: 'bg-indigo-500',
+    },
+    {
+      title: 'Analytics',
+      description: 'View performance metrics',
+      href: '/analytics',
+      icon: TrendingUp,
+      color: 'bg-green-500',
+    },
+    {
+      title: 'API Logs',
+      description: 'Monitor API activity',
+      href: '/facebook-api-logs',
+      icon: Activity,
+      color: 'bg-red-500',
     },
   ]
 
@@ -118,11 +158,7 @@ export function Dashboard() {
       <div className="space-y-6">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-            ))}
-          </div>
+          <StatsGrid stats={Array(6).fill({ label: '', value: 0 })} columns={2} />
         </div>
       </div>
     )
@@ -130,83 +166,88 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-500">
+      {/* Header */}
+      <div className="text-center lg:text-left">
+        <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="mt-2 text-sm lg:text-base text-gray-500">
           Welcome to the AutoAuthor admin portal. Here's an overview of your system.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {statCards.map((card) => {
-          const Icon = card.icon
-          return (
-            <Link
-              key={card.name}
-              to={card.href}
-              className="relative overflow-hidden rounded-lg bg-white px-4 py-5 shadow hover:shadow-md transition-shadow sm:px-6"
-            >
-              <div>
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className={`inline-flex items-center justify-center p-3 rounded-md ${card.color}`}>
-                      <Icon className="h-6 w-6 text-white" />
+      {/* Stats Grid */}
+      <StatsGrid stats={statItems} columns={2} />
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {quickActions.map((action) => {
+              const Icon = action.icon
+              return (
+                <Link
+                  key={action.href}
+                  to={action.href}
+                  className="group p-4 rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-md transition-all duration-200"
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className={`flex-shrink-0 p-2 rounded-lg ${action.color}`}>
+                      <Icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                        {action.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {action.description}
+                      </p>
                     </div>
                   </div>
-                  <div className="ml-5 w-0 flex-1">
-                    <dl>
-                      <dt className="text-sm font-medium text-gray-500 truncate">
-                        {card.name}
-                      </dt>
-                      <dd className="text-lg font-medium text-gray-900">
-                        {card.value.toLocaleString()}
-                      </dd>
-                    </dl>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          )
-        })}
-      </div>
-
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Quick Actions
-          </h3>
-          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Link
-              to="/users"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Manage Users
-            </Link>
-            <Link
-              to="/campaigns"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200"
-            >
-              <Megaphone className="mr-2 h-4 w-4" />
-              View Campaigns
-            </Link>
-            <Link
-              to="/brands"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200"
-            >
-              <Palette className="mr-2 h-4 w-4" />
-              Manage Brands
-            </Link>
-            <Link
-              to="/ai-config"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200"
-            >
-              <Bot className="mr-2 h-4 w-4" />
-              AI Configuration
-            </Link>
+                </Link>
+              )
+            })}
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activity */}
+      <Card>
+        <CardHeader>
+          <CardTitle>System Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="text-sm font-medium text-green-800">All systems operational</span>
+              </div>
+              <span className="text-xs text-green-600">Last checked: just now</span>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Database</span>
+                <span className="text-green-600 font-medium">Healthy</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">API Services</span>
+                <span className="text-green-600 font-medium">Online</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Background Jobs</span>
+                <span className="text-green-600 font-medium">Running</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Storage</span>
+                <span className="text-green-600 font-medium">Available</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

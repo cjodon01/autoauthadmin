@@ -251,7 +251,7 @@ export function Users() {
         <CardHeader>
           <CardTitle>All Users</CardTitle>
         </CardHeader>
-        <CardContent padding="none">
+        <CardContent>
           <div className="p-6">
             <ResponsiveTable
               data={users}

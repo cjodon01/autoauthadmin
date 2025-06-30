@@ -231,7 +231,7 @@ export function Layout({ children }: LayoutProps) {
       }`}>
         <div className="flex flex-col h-full">
           {/* Mobile sidebar header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">AA</span>
@@ -249,13 +249,13 @@ export function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          {/* Mobile navigation */}
+          {/* Mobile navigation - scrollable */}
           <nav className="flex-1 px-4 py-6 overflow-y-auto">
             {navigation.map(item => renderNavigationItem(item))}
           </nav>
 
           {/* Mobile user section */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-gray-200 flex-shrink-0">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
                 <User className="h-5 w-5 text-primary-600" />
@@ -280,7 +280,7 @@ export function Layout({ children }: LayoutProps) {
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-sm">
           {/* Desktop header */}
-          <div className="flex items-center px-6 py-6">
+          <div className="flex items-center px-6 py-6 flex-shrink-0">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold">AA</span>
@@ -292,13 +292,13 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </div>
 
-          {/* Desktop navigation */}
+          {/* Desktop navigation - scrollable */}
           <nav className="flex-1 px-4 pb-4 overflow-y-auto">
             {navigation.map(item => renderNavigationItem(item))}
           </nav>
 
           {/* Desktop user section */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-gray-200 flex-shrink-0">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
                 <User className="h-5 w-5 text-primary-600" />
@@ -342,6 +342,20 @@ export function Layout({ children }: LayoutProps) {
             <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
               <Bell className="h-5 w-5" />
             </button>
+            {/* Built with Bolt badge - Mobile */}
+            <a
+              href="https://bolt.new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-black hover:bg-gray-800 transition-colors"
+              title="Built with Bolt"
+            >
+              <img
+                src="/image.png"
+                alt="Built with Bolt"
+                className="w-6 h-6"
+              />
+            </a>
           </div>
         </div>
 
@@ -360,6 +374,20 @@ export function Layout({ children }: LayoutProps) {
               <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
                 <Bell className="h-5 w-5" />
               </button>
+              {/* Built with Bolt badge - Desktop */}
+              <a
+                href="https://bolt.new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-black hover:bg-gray-800 transition-colors"
+                title="Built with Bolt"
+              >
+                <img
+                  src="/image.png"
+                  alt="Built with Bolt"
+                  className="w-8 h-8"
+                />
+              </a>
             </div>
           </div>
         </div>

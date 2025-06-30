@@ -249,10 +249,12 @@ export function Layout({ children }: LayoutProps) {
             </button>
           </div>
 
-          {/* Mobile navigation - scrollable */}
-          <nav className="flex-1 px-4 py-6 overflow-y-auto">
-            {navigation.map(item => renderNavigationItem(item))}
-          </nav>
+          {/* Mobile navigation - scrollable with proper height */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <nav className="px-4 py-6">
+              {navigation.map(item => renderNavigationItem(item))}
+            </nav>
+          </div>
 
           {/* Mobile user section */}
           <div className="p-4 border-t border-gray-200 flex-shrink-0">
@@ -278,7 +280,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Desktop sidebar */}
       <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col">
-        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-sm">
+        <div className="flex flex-col flex-grow bg-white border-r border-gray-200 shadow-sm h-full">
           {/* Desktop header */}
           <div className="flex items-center px-6 py-6 flex-shrink-0">
             <div className="flex items-center space-x-3">
@@ -292,10 +294,12 @@ export function Layout({ children }: LayoutProps) {
             </div>
           </div>
 
-          {/* Desktop navigation - scrollable */}
-          <nav className="flex-1 px-4 pb-4 overflow-y-auto">
-            {navigation.map(item => renderNavigationItem(item))}
-          </nav>
+          {/* Desktop navigation - scrollable with proper height */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <nav className="px-4 pb-4">
+              {navigation.map(item => renderNavigationItem(item))}
+            </nav>
+          </div>
 
           {/* Desktop user section */}
           <div className="p-4 border-t border-gray-200 flex-shrink-0">
